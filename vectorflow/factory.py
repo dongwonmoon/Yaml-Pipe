@@ -1,11 +1,9 @@
-from .sources import LocalFileSource
+from .sources import LocalFileSource, WebSource
 from .chunkers import RecursiveCharacterChunker
 from .embedders import SentenceTransformerEmbedder
 from .sinks import LanceDBSink
 
-SOURCE_REGISTRY = {
-    "local_files": LocalFileSource,
-}
+SOURCE_REGISTRY = {"local_files": LocalFileSource, "web": WebSource}
 
 CHUNKER_REGISTRY = {
     "recursive_character": RecursiveCharacterChunker,

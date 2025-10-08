@@ -9,7 +9,7 @@ from .factory import (
 )
 
 
-def run_pipeline(config_path: str = "pipeline.yml"):
+def run_pipeline(config_path: str):
     """
     설정 파일을 기반으로 전체 임베딩 파이프라인을 실행합니다.
     """
