@@ -1,0 +1,21 @@
+source:
+  type: web
+  config:
+    url: "https://ko.wikipedia.org/wiki/%EC%9E%84%EB%B2%A0%EB%94%A9"
+
+chunker:
+  type: recursive_character
+  config:
+    chunk_size: 200
+    chunk_overlap: 40
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: chromadb
+  config:
+    path: "./chromadb"
+    collection_name: "my_chroma_collection"

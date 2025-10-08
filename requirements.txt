@@ -6,3 +6,4 @@ pydantic
 pandas
 requests
 beautifulsoup4
+chromadb-client
