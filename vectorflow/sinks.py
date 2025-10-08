@@ -10,6 +10,7 @@ from lancedb.pydantic import pydantic_to_schema, Vector
 import chromadb
 
 from .data_models import Document
+from .dynamic_schemas import create_dynamic_pydantic_model
 
 
 logger = logging.getLogger(__name__)
@@ -36,17 +37,25 @@ class LanceDBSink(BaseSink):
         )
         self.db = lancedb.connect(self.uri)
 
-        texts = [doc.content for doc in documents]
-        vectors = [doc.metadata.get("embedding") for doc in documents]
+        try:
+            DynamicModel = create_dynamic_pydantic_model(documents)
+            pyarrow_schema = pydantic_to_schema(DynamicModel)
+        except ValueError as e:
+            logger.error(f"Error creating dynamic Pydantic model: {e}")
+            return
 
-        data_df = pd.DataFrame({"text": texts, "vector": vectors})
-        vector_dimensions = data_df["vector"].iloc[0].shape[0]
+        records = []
+        for doc in documents:
+            record = {
+                "text": doc.content,
+                "vector": doc.metadata.get("embedding"),
+            }
+            for key, value in doc.metadata.items():
+                if key != "embedding":
+                    record[key] = value
+            records.append(record)
 
-        class Document(BaseModel):
-            text: str
-            vector: Vector(vector_dimensions)
-
-        pyarrow_schema = pydantic_to_schema(Document)
+        data = pd.DataFrame(records)
 
         self.db.drop_table(self.table_name, ignore_missing=True)
         table = self.db.create_table(self.table_name, schema=pyarrow_schema)
