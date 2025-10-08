@@ -1,6 +1,7 @@
 from .sources import LocalFileSource
 from .chunkers import RecursiveCharacterChunker
 from .embedders import SentenceTransformerEmbedder
+from .sinks import LanceDBSink
 
 SOURCE_REGISTRY = {
     "local_files": LocalFileSource,
@@ -13,6 +14,8 @@ CHUNKER_REGISTRY = {
 EMBEDDER_REGISTRY = {
     "sentence_transformer": SentenceTransformerEmbedder,
 }
+
+SINK_REGISTRY = {"lancedb": LanceDBSink}
 
 
 def build_component(component_config: dict, registry: dict):

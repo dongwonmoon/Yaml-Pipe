@@ -13,3 +13,9 @@ embedder:
   type: sentence_transformer
   config:
     model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: lancedb
+  config:
+    uri: "./lancedb_final"
+    table_name: "my_documents"
