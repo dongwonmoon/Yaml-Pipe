@@ -1,7 +1,7 @@
 from .sources import LocalFileSource, WebSource
 from .chunkers import RecursiveCharacterChunker
 from .embedders import SentenceTransformerEmbedder
-from .sinks import LanceDBSink
+from .sinks import LanceDBSink, ChromaDBSink
 
 SOURCE_REGISTRY = {"local_files": LocalFileSource, "web": WebSource}
 
@@ -13,7 +13,7 @@ EMBEDDER_REGISTRY = {
     "sentence_transformer": SentenceTransformerEmbedder,
 }
 
-SINK_REGISTRY = {"lancedb": LanceDBSink}
+SINK_REGISTRY = {"lancedb": LanceDBSink, "chromadb": ChromaDBSink}
 
 
 def build_component(component_config: dict, registry: dict):
