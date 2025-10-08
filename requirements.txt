@@ -1,0 +1,6 @@
+typer
+sentence-transformers
+lancedb
+langchain
+pydantic
+pandas

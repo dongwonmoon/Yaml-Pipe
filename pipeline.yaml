@@ -1,0 +1,15 @@
+source:
+  type: local_files
+  config:
+    path: ./data/vectorflow_intro.txt
+
+chunker:
+  type: recursive_character
+  config:
+    chunk_size: 150
+    chunk_overlap: 30
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
