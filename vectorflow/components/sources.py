@@ -6,8 +6,8 @@ import logging
 from typing import List, Dict
 from unstructured.partition.auto import partition
 
-from .state_manager import StateManager
-from .data_models import Document
+from ..core.state_manager import StateManager
+from ..core.data_models import Document
 
 logger = logging.getLogger(__name__)
 

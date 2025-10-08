@@ -9,8 +9,8 @@ import lancedb
 from lancedb.pydantic import pydantic_to_schema, Vector
 import chromadb
 
-from .data_models import Document
-from .dynamic_schemas import create_dynamic_pydantic_model
+from ..core.data_models import Document
+from ..utils.dynamic_schemas import create_dynamic_pydantic_model
 
 
 logger = logging.getLogger(__name__)

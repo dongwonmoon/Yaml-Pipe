@@ -1,6 +1,6 @@
 import pandas as pd
 import logging
-from .config import load_config
+from ..utils.config import load_config
 from .factory import (
     build_component,
     SOURCE_REGISTRY,

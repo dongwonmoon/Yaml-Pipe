@@ -2,7 +2,7 @@ import typer
 import logging
 from pathlib import Path
 import json
-from .pipeline import run_pipeline
+from .core.pipeline import run_pipeline
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
