@@ -1,7 +1,9 @@
 source:
   type: local_files
   config:
-    path: ./data/vectorflow_intro.txt
+    path: ./data
+    glob_pattern: "*.txt"
+    
 
 chunker:
   type: recursive_character
