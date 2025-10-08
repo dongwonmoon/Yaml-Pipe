@@ -7,13 +7,14 @@ from typing import List, Dict
 from unstructured.partition.auto import partition
 
 from .state_manager import StateManager
+from .data_models import Document
 
 logger = logging.getLogger(__name__)
 
 
 class BaseSource(ABC):
     @abstractmethod
-    def load_data(self) -> List[Dict[str, str]]:
+    def load_data(self) -> List[Document]:
         """Loads data from a source and returns its text content."""
         pass
 
@@ -24,7 +25,7 @@ class LocalFileSource(BaseSource):
         self.glob_pattern = glob_pattern
         self.state_manager = state_manager
 
-    def load_data(self) -> List[Dict[str, str]]:
+    def load_data(self) -> List[Document]:
         """Loads data from a local file and returns its text content."""
         logger.info(f"Loading data from file: {self.path}")
         all_files = [str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()]
@@ -45,7 +46,8 @@ class LocalFileSource(BaseSource):
                 elements = partition(filename=file_path_str)
                 content = "\n\n".join([str(el) for el in elements])
 
-                loaded_data.append({"path": file_path_str, "content": content})
+                doc = Document(content=content, metadata={"source": file_path_str})
+                loaded_data.append(doc)
                 logger.info(f"Loaded file: {file_path_str}")
 
             except Exception as e:
@@ -58,7 +60,7 @@ class WebSource(BaseSource):
     def __init__(self, url: str):
         self.url = url
 
-    def load_data(self) -> List[Dict[str, str]]:
+    def load_data(self) -> List[Document]:
         """Fetches HTML from the initialized URL and returns the extracted text."""
         logger.info(f"Loading data from URL: {self.url}")
         try:
@@ -71,7 +73,8 @@ class WebSource(BaseSource):
             lines = (line.strip() for line in text.splitlines())
             clean_text = "\n".join(line for line in lines if line)
 
-            return [{"path": self.url, "content": clean_text}]
+            doc = Document(content=clean_text, metadata={"source": self.url})
+            return [doc]
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Error accessing website: {self.url}", exc_info=True)

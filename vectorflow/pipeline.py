@@ -37,22 +37,23 @@ def run_pipeline(config_path: str):
         return
 
     all_chunks = []
-    all_embeddings = []
-    processed_paths = []
+    for doc in documents_to_process:
+        chunks = chunker.chunk(doc)
+        all_chunks.extend(chunks)
+    logger.info(f"Total number of chunks: {len(all_chunks)}")
+
+    chunk_contents = [chunk.content for chunk in all_chunks]
+    embeddings = embedder.embed(chunk_contents)
+
+    for i, chunk in enumerate(all_chunks):
+        chunk.metadata["embedding"] = embeddings[i]
+
+    sink.sink(all_chunks)
 
     for doc in documents_to_process:
-        chunks = chunker.chunk(doc["content"])
-        embeddings = embedder.embed(chunks)
-
-        all_chunks.extend(chunks)
-        all_embeddings.extend(embeddings)
-        processed_paths.append(doc["path"])
-
-    final_data = pd.DataFrame({"text": all_chunks, "vector": all_embeddings})
-    sink.sink(final_data)
-
-    for path in processed_paths:
-        state_manager.update_state(path)
+        source_identifier = doc.metadata.get("source")
+        if source_identifier:
+            state_manager.update_state(source_identifier)
     state_manager.save_state()
 
     logger.info("VectorFlow pipeline completed successfully.")
