@@ -2,7 +2,7 @@ source:
   type: local_files
   config:
     path: ./data
-    glob_pattern: "*.txt"
+    glob_pattern: "*.*"
     
 
 chunker:

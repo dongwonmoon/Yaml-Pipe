@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 from typing import List, Dict
+from unstructured.partition.auto import partition
 
 from .state_manager import StateManager
 
@@ -40,9 +41,15 @@ class LocalFileSource(BaseSource):
 
         loaded_data = []
         for file_path_str in new_or_changed_files:
-            with open(file_path_str, "r") as f:
-                file_content = f.read()
-                loaded_data.append({"path": file_path_str, "content": file_content})
+            try:
+                elements = partition(filename=file_path_str)
+                content = "\n\n".join([str(el) for el in elements])
+
+                loaded_data.append({"path": file_path_str, "content": content})
+                logger.info(f"Loaded file: {file_path_str}")
+
+            except Exception as e:
+                logger.error(f"Error loading file: {file_path_str}", exc_info=True)
 
         return loaded_data
 

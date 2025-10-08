@@ -7,3 +7,4 @@ pandas
 requests
 beautifulsoup4
 chromadb-client
+unstructured[local-inference]
