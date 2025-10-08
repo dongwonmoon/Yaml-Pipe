@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
 import requests
 from bs4 import BeautifulSoup
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSource(ABC):
     @abstractmethod
     def load_data(self) -> str:
-        """
-        데이터 소스로부터 데이터를 로드하고 텍스트 내용을 반환.
-        """
+        """Loads data from a source and returns its text content."""
         pass
 
 
@@ -17,13 +18,13 @@ class LocalFileSource(BaseSource):
         self.path = path
 
     def load_data(self) -> str:
-        print(f"{self.path} 파일에서 데이터를 로드합니다...")
-
+        """Loads data from a local file and returns its text content."""
+        logger.info(f"Loading data from file: {self.path}")
         try:
             with open(self.path, "r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
-            print(f"파일을 찾을 수 없습니다: {self.path}")
+            logger.error(f"File not found: {self.path}")
             return ""
 
 
@@ -32,11 +33,8 @@ class WebSource(BaseSource):
         self.url = url
 
     def load_data(self) -> str:
-        """
-        초기화된 URL에서 HTML을 가져와 텍스트만 추출하여 반환합니다.
-        """
-        print(f"'{self.url}' URL에서 데이터를 로드합니다...")
-
+        """Fetches HTML from the initialized URL and returns the extracted text."""
+        logger.info(f"Loading data from URL: {self.url}")
         try:
             response = requests.get(self.url)
             response.raise_for_status()
@@ -48,5 +46,5 @@ class WebSource(BaseSource):
             return "\n".join(line for line in lines if line)
 
         except requests.exceptions.RequestException as e:
-            print(f"웹사이트에 접속하는 중 에러가 발생했습니다: {e}")
+            logger.error(f"Error accessing website: {self.url}", exc_info=True)
             return ""

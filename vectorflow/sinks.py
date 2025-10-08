@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 import lancedb
+import logging
 from lancedb.pydantic import pydantic_to_schema, Vector
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSink(ABC):
@@ -17,11 +20,9 @@ class LanceDBSink(BaseSink):
         self.table_name = table_name
 
     def sink(self, data: pd.DataFrame):
-        """
-        입력받은 DataFrame을 LanceDB 테이블에 저장합니다.
-        """
-        print(
-            f"LanceDB에 데이터를 저장합니다. (URI: {self.uri}, 테이블: {self.table_name})"
+        """Sinks the given DataFrame into a LanceDB table."""
+        logger.info(
+            f"Sinking data to LanceDB. URI: {self.uri}, Table: {self.table_name}"
         )
         self.db = lancedb.connect(self.uri)
 
@@ -37,4 +38,4 @@ class LanceDBSink(BaseSink):
         table = self.db.create_table(self.table_name, schema=pyarrow_schema)
 
         table.add(data)
-        print("벡터 DB 저장 완료")
+        logger.info("Finished sinking data to vector DB.")
