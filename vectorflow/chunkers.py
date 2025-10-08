@@ -1,31 +1,29 @@
 from abc import ABC, abstractmethod
+import logging
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+logger = logging.getLogger(__name__)
 
 
 class BaseChunker(ABC):
     @abstractmethod
     def chunk(self, text: str) -> list[str]:
-        """
-        하나의 텍스트를 입력받아 여러 개의 텍스트 청크 리스트로 반환합니다.
-        """
+        """Chunks a single text into a list of text chunks."""
         pass
 
 
 class RecursiveCharacterChunker(BaseChunker):
     def __init__(self, chunk_size: int = 100, chunk_overlap: int = 20):
-        """
-        분할할 청크의 크기와 겹치는 크기를 초기화합니다.
-        """
+        """Initializes the chunker with a specific chunk size and overlap."""
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
     def chunk(self, text: str) -> list[str]:
-        """
-        텍스트를 청크로 분할합니다.
-        """
-
-        print(f"chunk size={self.chunk_size} 설정으로 텍스트를 분할합니다.")
+        """Splits the text into chunks."""
+        logger.info(
+            f"Splitting text with chunk size={self.chunk_size} and overlap={self.chunk_overlap}."
+        )
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,

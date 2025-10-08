@@ -1,4 +1,5 @@
 import pandas as pd
+import logging
 from .config import load_config
 from .factory import (
     build_component,
@@ -8,14 +9,14 @@ from .factory import (
     SINK_REGISTRY,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def run_pipeline(config_path: str):
-    """
-    설정 파일을 기반으로 전체 임베딩 파이프라인을 실행합니다.
-    """
+    """Runs the entire embedding pipeline based on a configuration file."""
     config = load_config(config_path)
     if not config:
-        print("🚨 설정 파일이 비어있어 파이프라인을 중단합니다.")
+        logger.warning("Configuration is empty. Aborting pipeline.")
         return
 
     source = build_component(config["source"], SOURCE_REGISTRY)
@@ -30,4 +31,4 @@ def run_pipeline(config_path: str):
     final_data = pd.DataFrame({"text": chunks, "vector": list(embeddings)})
     sink.sink(final_data)
 
-    print("🎉 VectorFlow 파이프라인이 성공적으로 완료되었습니다!")
+    logger.info("VectorFlow pipeline completed successfully.")
