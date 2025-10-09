@@ -78,6 +78,17 @@ class ChromaDBSink(BaseSink):
         client = chromadb.PersistentClient(path=self.path)
         collection = client.get_or_create_collection(name=self.collection_name)
 
+        docs_by_source = defaultdict(int)
+        for doc in documents:
+            source = doc.metadata.get("source")
+            if source:
+                docs_by_source[source].append(doc)
+
+        sources_to_delete = list(docs_by_source.keys())
+        if sources_to_delete:
+            logger.info(f"Delete exist data. Target source: {sources_to_delete}")
+            collection.delete(where={"source": {"$in": sources_to_delete}})
+
         ids = [str(uuid.uuid4()) for _ in range(len(documents))]
         contents = [doc.content for doc in documents]
         embeddings = [doc.metadata.get("embedding").tolist() for doc in documents]
