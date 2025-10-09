@@ -1,7 +1,7 @@
 from pydantic import BaseModel, create_model
 from typing import List, Dict, Any, Type
 from lancedb.pydantic import Vector
-from .data_models import Document
+from ..core.data_models import Document
 
 TYPE_MAP = {
     str: (str, ...),

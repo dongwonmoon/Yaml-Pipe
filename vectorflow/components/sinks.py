@@ -4,7 +4,7 @@ import logging
 from pydantic import BaseModel
 import uuid
 from typing import List
-from collection import defaultdict
+from collections import defaultdict
 
 import lancedb
 from lancedb.pydantic import pydantic_to_schema, Vector
@@ -45,6 +45,30 @@ class LanceDBSink(BaseSink):
             logger.error(f"Error creating dynamic Pydantic model: {e}")
             return
 
+        try:
+            table = self.db.open_table(self.table_name)
+            if table.schema != pyarrow_schema:
+                logger.info("The schema has changed, so the table will be regenerated.")
+                self.db.drop_table(self.table_name)
+                table = self.db.create_table(self.table_name, schema=pyarrow_schema)
+        except FileNotFoundError:
+            logger.info("The table does not exist, so create a new one.")
+            table = self.db.create_table(self.table_name, schema=pyarrow_schema)
+
+        docs_by_source = defaultdict(list)
+        for doc in documents:
+            source = doc.metadata.get("source")
+            if source:
+                docs_by_source[doc.metadata["source"]].append(doc)
+
+        sources_to_delete = list(docs_by_source.keys())
+        if sources_to_delete:
+            where_clause = " OR ".join(
+                [f"source == '{source}'" for source in sources_to_delete]
+            )
+            logger.info(f"Delete exist data. Target source: {sources_to_delete}")
+            table.delete(where=where_clause)
+
         records = []
         for doc in documents:
             record = {
@@ -57,9 +81,7 @@ class LanceDBSink(BaseSink):
             records.append(record)
 
         data = pd.DataFrame(records)
-
-        self.db.drop_table(self.table_name, ignore_missing=True)
-        table = self.db.create_table(self.table_name, schema=pyarrow_schema)
+        logger.info(f"Add new {len(data)} records.")
 
         table.add(data)
         logger.info("Finished sinking data to vector DB.")
