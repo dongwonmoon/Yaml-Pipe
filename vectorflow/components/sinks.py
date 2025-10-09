@@ -4,6 +4,7 @@ import logging
 from pydantic import BaseModel
 import uuid
 from typing import List
+from collection import defaultdict
 
 import lancedb
 from lancedb.pydantic import pydantic_to_schema, Vector

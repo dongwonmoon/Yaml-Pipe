@@ -1,5 +1,9 @@
 from ..components.sources import LocalFileSource, WebSource
-from ..components.chunkers import RecursiveCharacterChunker
+from ..components.chunkers import (
+    RecursiveCharacterChunker,
+    MarkdownChunker,
+    AdaptiveChunker,
+)
 from ..components.embedders import SentenceTransformerEmbedder
 from ..components.sinks import LanceDBSink, ChromaDBSink
 
@@ -7,6 +11,8 @@ SOURCE_REGISTRY = {"local_files": LocalFileSource, "web": WebSource}
 
 CHUNKER_REGISTRY = {
     "recursive_character": RecursiveCharacterChunker,
+    "markdown": MarkdownChunker,
+    "adaptive": AdaptiveChunker,
 }
 
 EMBEDDER_REGISTRY = {
@@ -21,7 +27,7 @@ def build_component(component_config: dict, registry: dict):
     Builds a component instance from a configuration dictionary and a registry.
 
     Args:
-        component_config: The component's configuration dictionary 
+        component_config: The component's configuration dictionary
                           (e.g., {'type': 'local_files', 'config': {'path': '...'}}).
         registry: The registry to use (e.g., SOURCE_REGISTRY).
     """

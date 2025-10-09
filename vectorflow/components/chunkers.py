@@ -2,7 +2,10 @@ from abc import ABC, abstractmethod
 import logging
 from typing import List
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,
+    MarkdownHeaderTextSplitter,
+)
 
 from ..core.data_models import Document
 
@@ -45,3 +48,53 @@ class RecursiveCharacterChunker(BaseChunker):
             chunked_documents.append(chunked_doc)
 
         return chunked_documents
+
+
+class MarkdownChunker(BaseChunker):
+    def __init__(self):
+        self.headers_to_split_on = [
+            ("#", "Header 1"),
+            ("##", "Header 2"),
+            ("###", "Header 3"),
+        ]
+        self._splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=self.headers_to_split_on
+        )
+
+    def chunk(self, document: Document) -> List[Document]:
+        logger.info("Process document by using markdown splitter.")
+
+        text_chunks = self._splitter.split_text(document.content)
+
+        return [
+            Document(
+                content=chunk.page_content,
+                metadata={**document.metadata.copy(), **chunk.metadata},
+            )
+            for chunk in text_chunks
+        ]
+
+
+class AdaptiveChunker(BaseChunker):
+    def __init__(self, chunk_size: int = 100, chunk_overlap: int = 20):
+        self._markdown_chunker = MarkdownChunker()
+        self._recursive_chunker = RecursiveCharacterChunker(chunk_size, chunk_overlap)
+
+    def _decide_strategy(self, document: Document) -> str:
+        content = document.content
+        if (
+            content.count("\n#") >= 2
+            or content.count("\n##") >= 2
+            or content.count("\n###") >= 2
+        ):
+            return "markdown"
+        else:
+            return "recursive"
+
+    def chunk(self, document: Document) -> list[Document]:
+        strategy = self._decide_strategy(document)
+
+        if strategy == "markdown":
+            return self._markdown_chunker.chunk(document)
+        elif strategy == "recursive":
+            return self._recursive_chunker.chunk(document)
