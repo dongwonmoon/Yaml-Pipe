@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 import json
 from typing_extensions import Annotated
+import shutil
 
 from .core.state_manager import StateManager
 from .core.pipeline import run_pipeline
@@ -180,3 +181,42 @@ def test_connection(
     except Exception as e:
         logger.error(f"Error testing connection: {e}", exc_info=True)
         raise typer.Exit(code=1)
+
+
+@app.command()
+def clean(
+    config_path: str = typer.Option("pipeline.yaml", "-c", help="Config file to use."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
+):
+    """Removes all generated files, including the state file and sink database."""
+    logger.info("Starting cleanup process...")
+
+    if not yes:
+        confirmed = typer.confirm("Are you sure you want to continue?")
+        if not confirmed:
+            logger.info("Aborting cleanup.")
+            return
+
+    state_file = Path(".vectorflow_state.json")
+    if state_file.exists():
+        logger.info(f"Removing state file: {state_file}")
+        state_file.unlink()
+        logger.info(f"Deleted state file: {state_file}")
+
+    try:
+        config = load_config(config_path)
+        sink_config = config.get("sink", {}).get("config", {})
+
+        sink_path_str = sink_config.get("uri") or sink_config.get("path")
+
+        if sink_path_str:
+            sink_path = Path(sink_path_str)
+            if sink_path.exists() and sink_path.is_dir():
+                shutil.rmtree(sink_path)
+                logger.info(f"Deleted sink directory: {sink_path}")
+    except SystemExit:
+        logger.warning(
+            f"Could not load config at '{config_path}' to clean Sink. Skipping."
+        )
+
+    logger.info("Cleanup process completed successfully.")
