@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.pytest_cache/
+.DS_Store
+
+# 생성된 데이터베이스 및 상태 파일 제외
+.vectorflow_state.json
+lancedb_*/
+chroma_db/
