@@ -1,7 +1,5 @@
 # VectorFlow
 
-> **Note:** This project is currently a work in progress. Features and configurations may change.
-
 VectorFlow is a flexible ETL pipeline designed to streamline the process of converting text data into vector embeddings and loading them into a vector database. It allows you to define and run a multi-step pipeline using a simple YAML configuration file.
 
 ## Features
