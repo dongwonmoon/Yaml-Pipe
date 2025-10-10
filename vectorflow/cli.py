@@ -10,6 +10,12 @@ import logging
 from pathlib import Path
 import json
 from .core.pipeline import run_pipeline
+from .core.factory import (
+    SOURCE_REGISTRY,
+    SINK_REGISTRY,
+    CHUNKER_REGISTRY,
+    EMBEDDER_REGISTRY,
+)
 
 # Configure logging for clear, user-friendly output
 logging.basicConfig(
@@ -117,3 +123,22 @@ def status():
         for file_path in sorted(processed_files.keys()):
             print(f"  - {file_path}")
         print("---------------------")
+
+
+@app.command(name="list-components")
+def list_componenets():
+    """ """
+    logger.info("Listing available components...")
+
+    def print_registry(title, registry):
+        print(f"\n--- {title} ---")
+        if not registry:
+            print("No components available.")
+            return
+        for name in sorted(registry.keys()):
+            print(f"  - {name}")
+
+    print_registry("Sources", SOURCE_REGISTRY)
+    print_registry("Chunkers", CHUNKER_REGISTRY)
+    print_registry("Embedders", EMBEDDER_REGISTRY)
+    print_registry("Sinks", SINK_REGISTRY)
