@@ -9,13 +9,19 @@ import typer
 import logging
 from pathlib import Path
 import json
+from typing_extensions import Annotated
+
+from .core.state_manager import StateManager
 from .core.pipeline import run_pipeline
 from .core.factory import (
     SOURCE_REGISTRY,
     SINK_REGISTRY,
     CHUNKER_REGISTRY,
     EMBEDDER_REGISTRY,
+    build_component,
 )
+from .utils.config import load_config
+
 
 # Configure logging for clear, user-friendly output
 logging.basicConfig(
@@ -142,3 +148,35 @@ def list_componenets():
     print_registry("Chunkers", CHUNKER_REGISTRY)
     print_registry("Embedders", EMBEDDER_REGISTRY)
     print_registry("Sinks", SINK_REGISTRY)
+
+
+@app.command(name="test-connection")
+def test_connection(
+    component: Annotated[
+        str, typer.Argument(help="Component to test (e.g., 'source' or 'sink')")
+    ],
+    config_path: str = typer.Option(
+        "pipeline.yaml", "-c", help="Path to the configuration file."
+    ),
+):
+    """Tests the connection for a specified component based on the config file."""
+    logger.info(f"Testing connection for component: '{component}'...")
+
+    try:
+        config = load_config(config_path)
+
+        if component == "source":
+            state_manager = StateManager()
+            config["source"]["config"]["state_manager"] = state_manager
+            comp_obj = build_component(config["source"], SOURCE_REGISTRY)
+        elif component == "sink":
+            comp_obj = build_component(config["sink"], SINK_REGISTRY)
+        else:
+            logger.error(f"Unknown component type: '{component}'")
+            raise typer.Exit(code=1)
+
+        comp_obj.test_connection()
+
+    except Exception as e:
+        logger.error(f"Error testing connection: {e}", exc_info=True)
+        raise typer.Exit(code=1)

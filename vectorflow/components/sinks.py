@@ -1,4 +1,3 @@
-
 """
 Data sink components for the VectorFlow pipeline.
 
@@ -38,6 +37,11 @@ class BaseSink(ABC):
         """
         pass
 
+    @abstractmethod
+    def test_connection(self):
+        """Tests the connection to the data sink."""
+        pass
+
 
 class LanceDBSink(BaseSink):
     """
@@ -75,7 +79,9 @@ class LanceDBSink(BaseSink):
             DynamicModel = create_dynamic_pydantic_model(documents)
             pyarrow_schema = pydantic_to_schema(DynamicModel)
         except (ValueError, TypeError) as e:
-            logger.error(f"Error creating dynamic Pydantic model or schema: {e}", exc_info=True)
+            logger.error(
+                f"Error creating dynamic Pydantic model or schema: {e}", exc_info=True
+            )
             return
 
         # Create or open the table, handling schema changes
@@ -100,7 +106,9 @@ class LanceDBSink(BaseSink):
         # Delete existing records from the table that match the sources of the new documents
         sources_to_delete = list(docs_by_source.keys())
         if sources_to_delete:
-            where_clause = " OR ".join([f"source = '{source}'" for source in sources_to_delete])
+            where_clause = " OR ".join(
+                [f"source = '{source}'" for source in sources_to_delete]
+            )
             logger.info(f"Deleting existing records from sources: {sources_to_delete}")
             try:
                 table.delete(where=where_clause)
@@ -128,6 +136,10 @@ class LanceDBSink(BaseSink):
             table.add(data)
 
         logger.info("Finished sinking data to LanceDB.")
+
+    def test_connection(self):
+        logger.warning("LanceDBSink connection test not yet implemented.")
+        pass
 
 
 class ChromaDBSink(BaseSink):
@@ -177,8 +189,20 @@ class ChromaDBSink(BaseSink):
         embeddings = [doc.metadata.get("embedding").tolist() for doc in documents]
         metadatas = [doc.metadata for doc in documents]
 
-        logger.info(f"Adding {len(documents)} new records to collection '{self.collection_name}'.")
+        logger.info(
+            f"Adding {len(documents)} new records to collection '{self.collection_name}'."
+        )
         collection.add(
             ids=ids, documents=contents, metadatas=metadatas, embeddings=embeddings
         )
         logger.info("Finished sinking data to ChromaDB.")
+
+    def test_connection(self):
+        logger.info(f"Testing connection for ChromaDBSink at path: {self.path}")
+        try:
+            client = chromadb.PersistentClient(path=self.path)
+            client.count_collections()
+            logger.info("Connection to ChromaDB successful.")
+        except Exception as e:
+            logger.error(f"Failed to connect to ChromaDB: {e}", exc_info=True)
+            raise ConnectionError(f"Failed to connect to ChromaDB: {e}")
