@@ -1,5 +1,5 @@
 """
-Text chunking components for the VectorFlow pipeline.
+Text chunking components for the YamlPipe pipeline.
 
 This module provides different strategies for splitting large documents into
 smaller, manageable chunks. This is a crucial step before generating embeddings.

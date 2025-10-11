@@ -1,5 +1,5 @@
 """
-Embedding components for the VectorFlow pipeline.
+Embedding components for the YamlPipe pipeline.
 
 This module contains classes responsible for converting text chunks
 into numerical vector embeddings using various models.

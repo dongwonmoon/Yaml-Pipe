@@ -1,5 +1,5 @@
 """
-Component Factory for the VectorFlow pipeline.
+Component Factory for the YamlPipe pipeline.
 
 This module implements the factory pattern for creating pipeline components.
 It uses registries to map configuration strings (e.g., 'local_files') to

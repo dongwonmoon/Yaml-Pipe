@@ -1,5 +1,5 @@
-from vectorflow.core.data_models import Document
-from vectorflow.components.chunkers import RecursiveCharacterChunker
+from yamlpipe.core.data_models import Document
+from yamlpipe.components.chunkers import RecursiveCharacterChunker
 
 
 def test_recursive_character_chunker():

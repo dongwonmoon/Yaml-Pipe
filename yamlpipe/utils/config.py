@@ -1,5 +1,5 @@
 """
-Configuration loading utility for VectorFlow.
+Configuration loading utility for YamlPipe.
 
 This module provides a function to safely load and parse a YAML configuration file.
 """

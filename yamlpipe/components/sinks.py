@@ -1,5 +1,5 @@
 """
-Data sink components for the VectorFlow pipeline.
+Data sink components for the YamlPipe pipeline.
 
 This module provides classes for writing the final processed documents
 (text chunks and their embeddings) to various destinations, such as

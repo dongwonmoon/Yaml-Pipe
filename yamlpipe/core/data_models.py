@@ -1,5 +1,5 @@
 """
-Core data models for the VectorFlow pipeline.
+Core data models for the YamlPipe pipeline.
 
 This module defines the standard data structures that are passed between
 components in the pipeline.

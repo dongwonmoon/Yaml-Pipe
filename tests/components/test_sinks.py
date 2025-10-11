@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 from unittest.mock import patch, MagicMock, ANY
 
-from vectorflow.components.sinks import LanceDBSink, ChromaDBSink
-from vectorflow.core.data_models import Document
+from yamlpipe.components.sinks import LanceDBSink, ChromaDBSink
+from yamlpipe.core.data_models import Document
 
 
 @pytest.fixture
@@ -39,11 +39,8 @@ def sample_documents():
     ]
 
 
-# --- Tests for LanceDBSink ---
-
-
-@patch("vectorflow.components.sinks.pydantic_to_schema")
-@patch("vectorflow.components.sinks.create_dynamic_pydantic_model")
+@patch("yamlpipe.components.sinks.pydantic_to_schema")
+@patch("yamlpipe.components.sinks.create_dynamic_pydantic_model")
 @patch("lancedb.connect")
 def test_lancedb_sink_creates_table_if_not_exists(
     mock_connect, mock_create_model, mock_to_schema, sample_documents
@@ -62,8 +59,7 @@ def test_lancedb_sink_creates_table_if_not_exists(
     mock_db.create_table.return_value.add.assert_called_once()
 
 
-@patch("vectorflow.components.sinks.pydantic_to_schema")
-@patch("vectorflow.components.sinks.create_dynamic_pydantic_model")
+@patch("yamlpipe.components.sinks.create_dynamic_pydantic_model")
 @patch("lancedb.connect")
 def test_lancedb_sink_deletes_old_records(
     mock_connect, mock_create_model, mock_to_schema, sample_documents

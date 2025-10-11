@@ -86,7 +86,7 @@ def run_pipeline(config_path: str):
     """
     Runs the entire embedding pipeline based on a configuration file.
     """
-    logger.info(f"VectorFlow pipeline starting with config: {config_path}")
+    logger.info(f"YamlPipe pipeline starting with config: {config_path}")
 
     try:
         state_manager = StateManager()
@@ -102,7 +102,7 @@ def run_pipeline(config_path: str):
         )
         _process_documents(source, chunker, embedder, sink, state_manager)
 
-        logger.info("VectorFlow pipeline completed successfully.")
+        logger.info("YamlPipe pipeline completed successfully.")
 
     except (FileNotFoundError, ValueError, KeyError) as e:
         logger.error(f"Pipeline failed: {e}", exc_info=True)

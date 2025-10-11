@@ -1,5 +1,5 @@
 """
-Data source components for the VectorFlow pipeline.
+Data source components for the YamlPipe pipeline.
 
 This module contains classes for loading data from various sources,
 such as local files and web pages. Each source is responsible for
@@ -206,16 +206,39 @@ class WebSource(BaseSource):
 
 
 class S3Source(BaseSource):
+    """
+    Loads documents from an AWS S3 bucket.
+
+    This source lists objects under a specified prefix in an S3 bucket. It uses the
+    object's ETag hash, managed by a StateManager, to process only new or
+    changed objects, similar to how LocalFileSource tracks local file hashes.
+    """
+
     def __init__(self, bucket: str, prefix: str, state_manager: StateManager):
+        """
+        Initializes the S3Source.
+
+        Args:
+            bucket (str): The name of the S3 bucket.
+            prefix (str): The prefix (folder path) within the bucket to scan for objects.
+            state_manager (StateManager): The state manager to track object changes.
+        """
         self.bucket_name = bucket
         self.prefix = prefix
         self.state_manager = state_manager
         self.s3_client = boto3.client("s3")
 
     def load_data(self) -> List[Document]:
+        """
+        Loads all objects from the S3 bucket/prefix that have changed since the last run.
+
+        It compares the ETag of each object with the stored ETag in the state manager
+        to determine if the object is new or has been modified.
+        """
         logger.info(f"Loading data from S3 bucket: {self.bucket_name}")
 
         try:
+            # List all objects within the specified bucket and prefix.
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name, Prefix=self.prefix
             )
@@ -224,25 +247,29 @@ class S3Source(BaseSource):
             logger.error(f"Error listing objects in S3 bucket: {e}", exc_info=True)
             return []
 
+        # Identify objects that are new or have a different ETag than the last run.
         new_or_changed_objects = []
         for obj in all_objects:
             obj_key = obj["Key"]
-            obj_etag = obj["ETag"].strip('"')
-            last_etag = self.state_manager.state["processed_files"].get(
-                f"s3://{self.bucket_name}/{obj_key}"
-            )
+            # ETag is an identifier for a specific version of an object.
+            obj_etag = obj["ETag"].strip('\'')
+            
+            # The source identifier for S3 objects is their full s3:// path.
+            source_id = f"s3://{self.bucket_name}/{obj_key}"
+            last_etag = self.state_manager.state["processed_files"].get(source_id)
 
             if obj_etag != last_etag:
                 new_or_changed_objects.append(obj)
 
         if not new_or_changed_objects:
-            logger.info("No new or changed objects detected.")
+            logger.info("No new or changed objects detected in S3.")
             return []
 
         logger.info(
             f"Found {len(new_or_changed_objects)} new or changed objects to process."
         )
 
+        # Download and read the content of new/changed objects.
         loaded_documents = []
         for obj in new_or_changed_objects:
             obj_key = obj["Key"]
@@ -263,19 +290,42 @@ class S3Source(BaseSource):
         return loaded_documents
 
     def test_connection(self):
+        """
+        Tests the connection to S3 by checking if the bucket is accessible.
+        Also verifies that AWS credentials are configured.
+        """
         logger.info(f"Testing connection to S3 bucket: {self.bucket_name}")
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
             logger.info("Connection to S3 bucket successful.")
         except NoCredentialsError:
-            raise Exception("AWS credentials not found.")
+            raise Exception("AWS credentials not found. Please configure boto3.")
         except ClientError as e:
+            # If a ClientError is caught, it can mean the bucket does not exist or is forbidden.
             logger.error(f"Error testing connection to S3 bucket: {e}", exc_info=True)
             raise ConnectionError(f"Failed to connect to S3 bucket: {self.bucket_name}")
 
 
 class PostgreSQLSource(BaseSource):
+    """
+    Loads data from a PostgreSQL database using a specified SQL query.
+
+    Each row returned by the query is treated as a separate document. The first
+    column of the query result is used as the main content, and the remaining
+    columns are added to the document's metadata.
+    """
+
     def __init__(self, host: str, database: str, user: str, password: str, query: str):
+        """
+        Initializes the PostgreSQLSource with database connection details and a query.
+
+        Args:
+            host (str): The database host.
+            database (str): The name of the database.
+            user (str): The username for authentication.
+            password (str): The password for authentication.
+            query (str): The SQL query to execute to fetch the data.
+        """
         self.db_params = {
             "host": host,
             "database": database,
@@ -285,26 +335,35 @@ class PostgreSQLSource(BaseSource):
         self.query = query
 
     def load_data(self) -> List[Document]:
+        """
+        Connects to the database, executes the configured query, and returns the
+        results as a list of Document objects.
+        """
         logger.info("Loading data from PostgreSQL database")
         loaded_documents = []
         conn = None
 
         try:
+            # Establish the database connection.
             conn = psycopg2.connect(**self.db_params)
+            # Use DictCursor to get rows as dictionaries (column_name: value).
             cur = conn.cursor(cursor_factory=DictCursor)
             cur.execute(self.query)
             rows = cur.fetchall()
 
             if not rows:
-                logger.info("No data found in the database")
+                logger.info("No data found in the database for the given query.")
                 return []
 
+            # Process each row from the query result.
             for i, row in enumerate(rows):
                 row_dict = dict(row)
 
+                # The first column is assumed to be the main content.
                 content_key = row.keys()[0]
                 content = row_dict.pop(content_key)
 
+                # The rest of the columns are treated as metadata.
                 metadata = row_dict
                 metadata["source"] = (
                     f"postgres://{self.db_params['user']}@{self.db_params['host']}/{self.db_params['database']}"
@@ -321,11 +380,16 @@ class PostgreSQLSource(BaseSource):
             return []
 
         finally:
+            # Ensure the connection is always closed.
             if conn:
                 conn.close()
 
     def test_connection(self):
+        """
+        Tests the connection to the PostgreSQL database by attempting to connect.
+        """
         logger.info("Testing connection to PostgreSQL database")
+        conn = None
         try:
             conn = psycopg2.connect(**self.db_params)
             conn.close()

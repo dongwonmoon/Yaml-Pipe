@@ -1,12 +1,12 @@
 import pytest
-from vectorflow.core.factory import (
+from yamlpipe.core.factory import (
     build_component,
     SOURCE_REGISTRY,
     CHUNKER_REGISTRY,
 )
-from vectorflow.components.sources import LocalFileSource
-from vectorflow.components.chunkers import RecursiveCharacterChunker
-from vectorflow.core.state_manager import StateManager
+from yamlpipe.components.sources import LocalFileSource
+from yamlpipe.components.chunkers import RecursiveCharacterChunker
+from yamlpipe.core.state_manager import StateManager
 
 
 def test_build_source_component():

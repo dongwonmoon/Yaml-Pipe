@@ -1,5 +1,5 @@
 """
-State management for the VectorFlow pipeline.
+State management for the YamlPipe pipeline.
 
 This module provides the StateManager class, which is responsible for tracking
 the state of processed files. It works by storing a hash of each file that
@@ -24,7 +24,7 @@ class StateManager:
     mapping file paths to their SHA256 hashes.
     """
 
-    def __init__(self, state_file_path: str = ".vectorflow_state.json"):
+    def __init__(self, state_file_path: str = ".yamlpipe_state.json"):
         """
         Initializes the StateManager.
 

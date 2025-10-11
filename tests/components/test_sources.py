@@ -6,8 +6,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 import requests
 
-from vectorflow.components.sources import LocalFileSource, WebSource
-from vectorflow.core.data_models import Document
+from yamlpipe.components.sources import LocalFileSource, WebSource
+from yamlpipe.core.data_models import Document
 
 
 @pytest.fixture

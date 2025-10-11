@@ -1,7 +1,7 @@
 """
-Command-Line Interface for VectorFlow.
+Command-Line Interface for YamlPipe.
 
-This module provides the main entry point for the VectorFlow application,
+This module provides the main entry point for the YamlPipe application,
 using Typer to create a clean and user-friendly CLI.
 """
 
@@ -44,7 +44,7 @@ def run(
     )
 ):
     """
-    Runs the VectorFlow embedding pipeline using a specified configuration file.
+    Runs the YamlPipe embedding pipeline using a specified configuration file.
     """
     run_pipeline(config_path=config_path)
 
@@ -52,12 +52,12 @@ def run(
 @app.command()
 def init():
     """
-    Initializes a new VectorFlow project in the current directory.
+    Initializes a new YamlPipe project in the current directory.
 
     This command creates a 'data' directory for source files and a default
     'pipeline.yaml' configuration file to get started quickly.
     """
-    logger.info("Initializing new VectorFlow project...")
+    logger.info("Initializing new YamlPipe project...")
 
     # Create a directory for source data
     Path("data").mkdir(exist_ok=True)
@@ -68,7 +68,7 @@ def init():
     if config_file.exists():
         logger.warning("'pipeline.yaml' already exists. Skipping creation.")
     else:
-        DEFAULT_YAML_CONTENT = """# Default VectorFlow Pipeline Configuration
+        DEFAULT_YAML_CONTENT = """# Default YamlPipe Pipeline Configuration
 
 source:
   type: local_files
@@ -97,19 +97,18 @@ sink:
         config_file.write_text(DEFAULT_YAML_CONTENT.strip())
         logger.info("Created default 'pipeline.yaml'.")
 
-    logger.info("VectorFlow project initialized successfully.")
+    logger.info("YamlPipe project initialized successfully.")
 
 
 @app.command()
 def status():
     """
-    Shows the status of the VectorFlow project by listing processed files.
+    Shows the status of the YamlPipe project by listing processed files.
 
     This command reads the .vectorflow_state.json file and displays a list
     of all file sources that have been successfully processed and are being tracked.
     """
-    logger.info("Checking project status...")
-    state_file = Path(".vectorflow_state.json")
+    state_file = Path(".yamlpipe_state.json")
 
     if not state_file.exists():
         logger.warning(

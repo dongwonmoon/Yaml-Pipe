@@ -2,7 +2,7 @@
 Configuration file for pytest.
 
 This file adds the project's root directory to the Python path so that
-pytest can find the 'vectorflow' module without needing to install it.
+pytest can find the 'yamlpipe' module without needing to install it.
 """
 
 import sys
