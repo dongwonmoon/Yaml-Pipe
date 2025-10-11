@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 import requests
 
 from yamlpipe.components.sources import LocalFileSource, WebSource
-from yamlpipe.core.data_models import Document
+from yamlpipe.utils.data_models import Document
 
 
 @pytest.fixture
@@ -46,9 +46,7 @@ def test_web_source_loads_data_successfully(mock_requests_get):
     # Setup mock response
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.text = (
-        "<html><body><h1>Title</h1><p>Hello world</p></body></html>"
-    )
+    mock_response.text = "<html><body><h1>Title</h1><p>Hello world</p></body></html>"
     mock_requests_get.return_value = mock_response
 
     source = WebSource(url="http://fake-url.com")
@@ -63,9 +61,7 @@ def test_web_source_loads_data_successfully(mock_requests_get):
 @patch("requests.get")
 def test_web_source_handles_request_exception(mock_requests_get):
     """Test that WebSource returns an empty list when a request fails."""
-    mock_requests_get.side_effect = requests.exceptions.RequestException(
-        "Test error"
-    )
+    mock_requests_get.side_effect = requests.exceptions.RequestException("Test error")
 
     source = WebSource(url="http://fake-url.com")
     documents = source.load_data()

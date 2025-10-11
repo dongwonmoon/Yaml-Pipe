@@ -6,7 +6,7 @@ from yamlpipe.core.factory import (
 )
 from yamlpipe.components.sources import LocalFileSource
 from yamlpipe.components.chunkers import RecursiveCharacterChunker
-from yamlpipe.core.state_manager import StateManager
+from yamlpipe.utils.state_manager import StateManager
 
 
 def test_build_source_component():

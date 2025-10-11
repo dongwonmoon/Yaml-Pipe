@@ -1,4 +1,4 @@
-from yamlpipe.core.data_models import Document
+from yamlpipe.utils.data_models import Document
 from yamlpipe.components.chunkers import RecursiveCharacterChunker
 
 

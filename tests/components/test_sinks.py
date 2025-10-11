@@ -8,7 +8,7 @@ import numpy as np
 from unittest.mock import patch, MagicMock, ANY
 
 from yamlpipe.components.sinks import LanceDBSink, ChromaDBSink
-from yamlpipe.core.data_models import Document
+from yamlpipe.utils.data_models import Document
 
 
 @pytest.fixture
@@ -102,9 +102,7 @@ def test_chromadb_sink_sinks_data(mock_persistent_client, sample_documents):
     sink = ChromaDBSink(path="/fake/chroma", collection_name="test_collection")
     sink.sink(sample_documents)
 
-    mock_client.get_or_create_collection.assert_called_once_with(
-        name="test_collection"
-    )
+    mock_client.get_or_create_collection.assert_called_once_with(name="test_collection")
 
     # Check that delete was called for the correct sources
     mock_collection.delete.assert_called_once_with(

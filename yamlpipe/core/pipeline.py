@@ -15,7 +15,7 @@ from .factory import (
     EMBEDDER_REGISTRY,
     SINK_REGISTRY,
 )
-from .state_manager import StateManager
+from ..utils.state_manager import StateManager
 
 logger = logging.getLogger(__name__)
 

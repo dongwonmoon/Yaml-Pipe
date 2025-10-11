@@ -14,7 +14,7 @@ import numpy as np
 import datetime
 
 from lancedb.pydantic import Vector
-from ..core.data_models import Document
+from .data_models import Document
 
 logger = logging.getLogger(__name__)
 

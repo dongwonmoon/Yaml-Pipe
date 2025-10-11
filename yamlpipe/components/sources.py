@@ -18,8 +18,8 @@ from botocore.exceptions import NoCredentialsError, ClientError
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from ..core.state_manager import StateManager
-from ..core.data_models import Document
+from ..utils.state_manager import StateManager
+from ..utils.data_models import Document
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class LocalFileSource(BaseSource):
     Loads documents from the local filesystem.
 
     This source scans a directory for files matching a glob pattern and uses the
-    `unstructured` library to parse их content. It tracks file modifications
+    `unstructured` library to parse content. It tracks file modifications
     using a StateManager to process only new or changed files.
     """
 
