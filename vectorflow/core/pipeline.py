@@ -43,17 +43,23 @@ def _process_documents(source, chunker, embedder, sink, state_manager):
     documents_to_process = source.load_data()
 
     if not documents_to_process:
-        logger.info("No new or modified documents to process. Pipeline finished.")
+        logger.info(
+            "No new or modified documents to process. Pipeline finished."
+        )
         return
 
     logger.info(f"Loaded {len(documents_to_process)} new/modified documents.")
 
     logger.info(f"Chunking documents using: {chunker.__class__.__name__}")
-    all_chunks = [chunk for doc in documents_to_process for chunk in chunker.chunk(doc)]
+    all_chunks = [
+        chunk for doc in documents_to_process for chunk in chunker.chunk(doc)
+    ]
     logger.info(f"Total number of chunks created: {len(all_chunks)}")
 
     if not all_chunks:
-        logger.info("No chunks were created from the documents. Nothing to embed or sink.")
+        logger.info(
+            "No chunks were created from the documents. Nothing to embed or sink."
+        )
         return
 
     logger.info(f"Generating embeddings using: {embedder.__class__.__name__}")
@@ -86,10 +92,14 @@ def run_pipeline(config_path: str):
         state_manager = StateManager()
         config = load_config(config_path)
         if not config:
-            logger.error("Configuration is empty or could not be loaded. Aborting pipeline.")
+            logger.error(
+                "Configuration is empty or could not be loaded. Aborting pipeline."
+            )
             return
 
-        source, chunker, embedder, sink = _build_components(config, state_manager)
+        source, chunker, embedder, sink = _build_components(
+            config, state_manager
+        )
         _process_documents(source, chunker, embedder, sink, state_manager)
 
         logger.info("VectorFlow pipeline completed successfully.")

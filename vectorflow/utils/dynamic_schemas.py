@@ -47,7 +47,9 @@ def create_dynamic_pydantic_model(documents: List[Document]) -> Type[BaseModel]:
         TypeError: If a metadata value has a type not supported by the TYPE_MAP.
     """
     if not documents:
-        raise ValueError("At least one document is required to create a schema.")
+        raise ValueError(
+            "At least one document is required to create a schema."
+        )
 
     logger.debug("Starting dynamic Pydantic model creation.")
 
@@ -57,7 +59,9 @@ def create_dynamic_pydantic_model(documents: List[Document]) -> Type[BaseModel]:
         for key, value in doc.metadata.items():
             if key not in metadata_fields and type(value) in TYPE_MAP:
                 metadata_fields[key] = type(value)
-                logger.debug(f"Discovered metadata field '{key}' with type {type(value)}.")
+                logger.debug(
+                    f"Discovered metadata field '{key}' with type {type(value)}."
+                )
 
     # --- Define the fields for the Pydantic model ---
     pydantic_fields = {}
@@ -68,22 +72,32 @@ def create_dynamic_pydantic_model(documents: List[Document]) -> Type[BaseModel]:
     # 2. Add the 'vector' field, inferring its dimension
     first_embedding = documents[0].metadata.get("embedding")
     if first_embedding is None or not isinstance(first_embedding, np.ndarray):
-        raise ValueError("First document must have a valid numpy embedding to infer vector dimension.")
+        raise ValueError(
+            "First document must have a valid numpy embedding to infer vector dimension."
+        )
     vector_dim = first_embedding.shape[0]
     pydantic_fields["vector"] = (Vector(vector_dim), ...)
     logger.debug(f"Inferred vector dimension: {vector_dim}")
 
     # 3. Add fields for all discovered metadata
     for key, value_type in metadata_fields.items():
-        if key != "embedding":  # Avoid adding the raw embedding as a separate field
+        if (
+            key != "embedding"
+        ):  # Avoid adding the raw embedding as a separate field
             if value_type in TYPE_MAP:
                 pydantic_fields[key] = TYPE_MAP[value_type]
             else:
                 # This case should ideally not be hit due to the check during discovery
-                raise TypeError(f"Unsupported type '{value_type}' for metadata key '{key}'.")
+                raise TypeError(
+                    f"Unsupported type '{value_type}' for metadata key '{key}'."
+                )
 
     # Create the Pydantic model class
-    DynamicDocumentModel = create_model("DynamicDocumentModel", **pydantic_fields)
-    logger.debug(f"Created DynamicDocumentModel with fields: {list(pydantic_fields.keys())}")
+    DynamicDocumentModel = create_model(
+        "DynamicDocumentModel", **pydantic_fields
+    )
+    logger.debug(
+        f"Created DynamicDocumentModel with fields: {list(pydantic_fields.keys())}"
+    )
 
     return DynamicDocumentModel

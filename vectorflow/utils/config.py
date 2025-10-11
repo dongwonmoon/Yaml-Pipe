@@ -45,11 +45,15 @@ def load_config(config_path: str) -> dict:
         # Pydantic Validation
         PipelineConfig.model_validate(config)
 
-        logger.info(f"Successfully loaded and validated configuration from: '{path}'")
+        logger.info(
+            f"Successfully loaded and validated configuration from: '{path}'"
+        )
         return config
 
     except (yaml.YAMLError, IOError) as e:
-        logger.error(f"Error reading or parsing YAML file '{path}': {e}", exc_info=True)
+        logger.error(
+            f"Error reading or parsing YAML file '{path}': {e}", exc_info=True
+        )
         sys.exit(1)
     except ValidationError as e:
         # Pydantic provides detailed, user-friendly error messages.

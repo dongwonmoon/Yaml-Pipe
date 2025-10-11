@@ -19,9 +19,13 @@ class Evaluator:
 
         if self.sink_type == "lancedb":
             db = lancedb.connect(self.sink_config["config"]["uri"])
-            self.retriever = db.open_table(self.sink_config["config"]["table_name"])
+            self.retriever = db.open_table(
+                self.sink_config["config"]["table_name"]
+            )
         elif self.sink_type == "chromadb":
-            client = chromadb.PersistentClient(path=self.sink_config["config"]["path"])
+            client = chromadb.PersistentClient(
+                path=self.sink_config["config"]["path"]
+            )
             self.retriever = client.get_collection(
                 self.sink_config["config"]["collection_name"]
             )

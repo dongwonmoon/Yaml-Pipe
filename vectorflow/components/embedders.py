@@ -58,28 +58,37 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         logger.debug(f"Loading SentenceTransformer model: '{self.model_name}'")
         try:
             model = SentenceTransformer(self.model_name)
-            logger.info(f"SentenceTransformer model '{self.model_name}' loaded successfully.")
+            logger.info(
+                f"SentenceTransformer model '{self.model_name}' loaded successfully."
+            )
             return model
         except Exception as e:
             logger.error(
                 f"Failed to load SentenceTransformer model '{self.model_name}'. "
                 f"Please ensure the model name is correct and you have an internet connection.",
-                exc_info=True
+                exc_info=True,
             )
             raise e
 
     def embed(self, chunks: list[str]) -> np.ndarray:
         """Converts text chunks into embeddings using the pre-loaded model."""
         if not chunks:
-            logger.warning("Embedder received an empty list of chunks. Returning empty array.")
+            logger.warning(
+                "Embedder received an empty list of chunks. Returning empty array."
+            )
             return np.array([])
 
-        logger.info(f"Embedding {len(chunks)} chunks using '{self.model_name}'...")
+        logger.info(
+            f"Embedding {len(chunks)} chunks using '{self.model_name}'..."
+        )
         try:
             embeddings = self.model.encode(chunks, show_progress_bar=False)
             logger.info(f"Finished embedding {len(chunks)} chunks.")
             logger.debug(f"Output embedding shape: {embeddings.shape}")
             return embeddings
         except Exception as e:
-            logger.error(f"An error occurred during the embedding process: {e}", exc_info=True)
+            logger.error(
+                f"An error occurred during the embedding process: {e}",
+                exc_info=True,
+            )
             raise e

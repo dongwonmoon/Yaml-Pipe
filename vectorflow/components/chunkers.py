@@ -68,7 +68,9 @@ class RecursiveCharacterChunker(BaseChunker):
         """Splits a document's content into chunks using a recursive character splitter."""
         source = document.metadata.get("source", "unknown")
         if not document.content or not document.content.strip():
-            logger.warning(f"Document from source '{source}' is empty. Skipping chunking.")
+            logger.warning(
+                f"Document from source '{source}' is empty. Skipping chunking."
+            )
             return []
 
         logger.debug(f"Recursively splitting document from source: {source}")
@@ -81,7 +83,9 @@ class RecursiveCharacterChunker(BaseChunker):
             chunked_doc = Document(content=text_chunk, metadata=new_metadata)
             chunked_documents.append(chunked_doc)
 
-        logger.debug(f"Created {len(chunked_documents)} chunks from source: {source}")
+        logger.debug(
+            f"Created {len(chunked_documents)} chunks from source: {source}"
+        )
         return chunked_documents
 
 
@@ -109,7 +113,9 @@ class MarkdownChunker(BaseChunker):
         """Splits a document based on Markdown header structure."""
         source = document.metadata.get("source", "unknown")
         if not document.content or not document.content.strip():
-            logger.warning(f"Document from source '{source}' is empty. Skipping chunking.")
+            logger.warning(
+                f"Document from source '{source}' is empty. Skipping chunking."
+            )
             return []
 
         logger.debug(f"Splitting Markdown document from source: {source}")
@@ -122,10 +128,15 @@ class MarkdownChunker(BaseChunker):
                 )
                 for chunk in text_chunks
             ]
-            logger.debug(f"Created {len(chunked_documents)} chunks from source: {source}")
+            logger.debug(
+                f"Created {len(chunked_documents)} chunks from source: {source}"
+            )
             return chunked_documents
         except Exception as e:
-            logger.error(f"Failed to split Markdown for source '{source}': {e}", exc_info=True)
+            logger.error(
+                f"Failed to split Markdown for source '{source}': {e}",
+                exc_info=True,
+            )
             return []
 
 
@@ -146,7 +157,9 @@ class AdaptiveChunker(BaseChunker):
             chunk_overlap (int): The chunk overlap for the recursive chunker.
         """
         self._markdown_chunker = MarkdownChunker()
-        self._recursive_chunker = RecursiveCharacterChunker(chunk_size, chunk_overlap)
+        self._recursive_chunker = RecursiveCharacterChunker(
+            chunk_size, chunk_overlap
+        )
         logger.debug("Initialized AdaptiveChunker")
 
     def _decide_strategy(self, document: Document) -> str:
@@ -166,7 +179,9 @@ class AdaptiveChunker(BaseChunker):
         strategy = self._decide_strategy(document)
         source = document.metadata.get("source", "unknown")
 
-        logger.info(f"Using '{strategy}' chunking strategy for source: {source}")
+        logger.info(
+            f"Using '{strategy}' chunking strategy for source: {source}"
+        )
 
         if strategy == "markdown":
             return self._markdown_chunker.chunk(document)

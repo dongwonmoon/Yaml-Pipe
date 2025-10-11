@@ -57,7 +57,9 @@ class LocalFileSource(BaseSource):
     using a StateManager to process only new or changed files.
     """
 
-    def __init__(self, path: str, glob_pattern: str, state_manager: StateManager):
+    def __init__(
+        self, path: str, glob_pattern: str, state_manager: StateManager
+    ):
         """
         Initializes the LocalFileSource.
 
@@ -83,11 +85,17 @@ class LocalFileSource(BaseSource):
             f"Scanning for files in '{self.path}' with pattern '{self.glob_pattern}'."
         )
         if not self.path.is_dir():
-            logger.error(f"Source path '{self.path}' is not a valid directory. Aborting.")
+            logger.error(
+                f"Source path '{self.path}' is not a valid directory. Aborting."
+            )
             return []
 
-        all_files = [str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()]
-        logger.debug(f"Found {len(all_files)} total files matching glob pattern.")
+        all_files = [
+            str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()
+        ]
+        logger.debug(
+            f"Found {len(all_files)} total files matching glob pattern."
+        )
 
         new_or_changed_files = [
             f for f in all_files if self.state_manager.has_changed(f)
@@ -109,26 +117,41 @@ class LocalFileSource(BaseSource):
                 content = "\n\n".join([str(el) for el in elements])
 
                 if not content.strip():
-                    logger.warning(f"File '{file_path_str}' is empty or contains no text. Skipping.")
+                    logger.warning(
+                        f"File '{file_path_str}' is empty or contains no text. Skipping."
+                    )
                     continue
 
-                doc = Document(content=content, metadata={"source": file_path_str})
+                doc = Document(
+                    content=content, metadata={"source": file_path_str}
+                )
                 loaded_data.append(doc)
-                logger.debug(f"Successfully loaded and partitioned file: {file_path_str}")
+                logger.debug(
+                    f"Successfully loaded and partitioned file: {file_path_str}"
+                )
 
             except Exception as e:
-                logger.error(f"Error processing file '{file_path_str}': {e}", exc_info=True)
+                logger.error(
+                    f"Error processing file '{file_path_str}': {e}",
+                    exc_info=True,
+                )
 
         logger.info(f"Successfully loaded {len(loaded_data)} documents.")
         return loaded_data
 
     def test_connection(self):
         """Tests if the source directory exists and is accessible."""
-        logger.info(f"Testing connection for LocalFileSource at path: {self.path}")
+        logger.info(
+            f"Testing connection for LocalFileSource at path: {self.path}"
+        )
         if not self.path.exists():
-            raise FileNotFoundError(f"Source path '{self.path}' does not exist.")
+            raise FileNotFoundError(
+                f"Source path '{self.path}' does not exist."
+            )
         if not self.path.is_dir():
-            raise NotADirectoryError(f"Source path '{self.path}' is not a directory.")
+            raise NotADirectoryError(
+                f"Source path '{self.path}' is not a directory."
+            )
         logger.info("Connection to LocalFileSource successful.")
 
 
@@ -170,11 +193,16 @@ class WebSource(BaseSource):
                 return []
 
             doc = Document(content=clean_text, metadata={"source": self.url})
-            logger.info(f"Successfully fetched and parsed content from: {self.url}")
+            logger.info(
+                f"Successfully fetched and parsed content from: {self.url}"
+            )
             return [doc]
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to fetch content from URL '{self.url}': {e}", exc_info=True)
+            logger.error(
+                f"Failed to fetch content from URL '{self.url}': {e}",
+                exc_info=True,
+            )
             return []
 
     def test_connection(self):
@@ -185,5 +213,7 @@ class WebSource(BaseSource):
             response.raise_for_status()
             logger.info("Connection to WebSource successful.")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to connect to URL '{self.url}': {e}", exc_info=True)
+            logger.error(
+                f"Failed to connect to URL '{self.url}': {e}", exc_info=True
+            )
             raise ConnectionError(f"Failed to connect to URL: {self.url}")

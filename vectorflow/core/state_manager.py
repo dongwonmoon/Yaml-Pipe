@@ -43,12 +43,17 @@ class StateManager:
             Dict: The loaded or newly created state dictionary.
         """
         if self.state_file_path.exists():
-            logger.debug(f"Loading existing state from '{self.state_file_path}'")
+            logger.debug(
+                f"Loading existing state from '{self.state_file_path}'"
+            )
             try:
                 with open(self.state_file_path, "r") as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Error loading state file: {e}. Starting with a fresh state.", exc_info=True)
+                logger.error(
+                    f"Error loading state file: {e}. Starting with a fresh state.",
+                    exc_info=True,
+                )
                 return {"processed_files": {}}
 
         logger.debug(f"No state file found. Creating new state.")
@@ -62,7 +67,9 @@ class StateManager:
         try:
             with open(self.state_file_path, "w") as f:
                 json.dump(self.state, f, indent=4)
-            logger.info(f"Pipeline state saved successfully to '{self.state_file_path}'.")
+            logger.info(
+                f"Pipeline state saved successfully to '{self.state_file_path}'."
+            )
         except IOError as e:
             logger.error(f"Error saving state file: {e}", exc_info=True)
 
@@ -84,7 +91,10 @@ class StateManager:
                     hash_obj.update(chunk)
             return hash_obj.hexdigest()
         except (IOError, FileNotFoundError) as e:
-            logger.error(f"Could not compute hash for file {file_path}: {e}", exc_info=True)
+            logger.error(
+                f"Could not compute hash for file {file_path}: {e}",
+                exc_info=True,
+            )
             return ""
 
     def has_changed(self, file_path_str: str) -> bool:
@@ -108,7 +118,9 @@ class StateManager:
 
         changed = current_hash != last_hash
         if changed:
-            logger.debug(f"Change detected for file '{file_path_str}' (new hash: {current_hash[:7]}...).")
+            logger.debug(
+                f"Change detected for file '{file_path_str}' (new hash: {current_hash[:7]}...)."
+            )
         return changed
 
     def update_state(self, file_path_str: str):
@@ -123,4 +135,6 @@ class StateManager:
         current_hash = self.get_file_hash(Path(file_path_str))
         if current_hash:
             self.state["processed_files"][file_path_str] = current_hash
-            logger.debug(f"Updated state for '{file_path_str}' with hash {current_hash[:7]}...")
+            logger.debug(
+                f"Updated state for '{file_path_str}' with hash {current_hash[:7]}..."
+            )

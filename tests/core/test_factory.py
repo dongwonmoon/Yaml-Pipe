@@ -1,5 +1,9 @@
 import pytest
-from vectorflow.core.factory import build_component, SOURCE_REGISTRY, CHUNKER_REGISTRY
+from vectorflow.core.factory import (
+    build_component,
+    SOURCE_REGISTRY,
+    CHUNKER_REGISTRY,
+)
 from vectorflow.components.sources import LocalFileSource
 from vectorflow.components.chunkers import RecursiveCharacterChunker
 from vectorflow.core.state_manager import StateManager
@@ -36,6 +40,6 @@ def test_build_component_invalid_type():
     """Tests if the factory raises an error for an unknown type."""
     config = {"type": "non_existent_type", "config": {}}
     with pytest.raises(
-        ValueError, match="'non_existent_type'은(는) 유효한 타입이 아닙니다."
+        ValueError, match="'non_existent_type' is not a valid component type."
     ):
         build_component(config, SOURCE_REGISTRY)
