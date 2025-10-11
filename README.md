@@ -1,6 +1,6 @@
-# VectorFlow
+# YamlPipe
 
-VectorFlow is a flexible ETL pipeline designed to streamline the process of converting text data into vector embeddings and loading them into a vector database. It allows you to define and run a multi-step pipeline using a simple YAML configuration file.
+YamlPipe is a flexible ETL pipeline designed to streamline the process of converting text data into vector embeddings and loading them into a vector database. It allows you to define and run a multi-step pipeline using a simple YAML configuration file.
 
 ## Features
 
@@ -14,8 +14,8 @@ VectorFlow is a flexible ETL pipeline designed to streamline the process of conv
 
 1.  Clone the repository:
     ```bash
-    git clone <repository-url>
-    cd vector-flow
+    git clone https://github.com/dongwonmoon/Yaml-Pipe.git
+    cd Yaml-Pipe
     ```
 
 2.  Install the required dependencies:
