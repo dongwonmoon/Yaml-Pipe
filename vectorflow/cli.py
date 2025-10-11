@@ -21,6 +21,7 @@ from .core.factory import (
     EMBEDDER_REGISTRY,
     build_component,
 )
+from .core.evaluation import Evaluator
 from .utils.config import load_config
 
 
@@ -220,3 +221,37 @@ def clean(
         )
 
     logger.info("Cleanup process completed successfully.")
+
+
+@app.command()
+def eval(
+    dataset_path: Annotated[
+        str, typer.Argument(help="Path to the evaluation dataset (.jsonl file).")
+    ],
+    config_path: str = typer.Option(
+        "pipeline.yml",
+        "-c",
+        help="Path to the configuration file to use for the evaluation.",
+    ),
+    k: int = typer.Option(
+        5, "--top-k", "-k", help="Number of top results to check for a hit."
+    ),
+):
+    """
+    Evaluates the performance of the vector database using a given dataset.
+    """
+    logger.info(f"Starting evaluation with config: '{config_path}'")
+
+    try:
+        config = load_config(config_path)
+
+        embedder = build_component(config["embedder"], EMBEDDER_REGISTRY)
+        sink_config = config["sink"]
+
+        evaluator = Evaluator(embedder=embedder, sink_config=sink_config)
+
+        evaluator.evaluate(dataset_path=dataset_path, k=k)
+
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}", exc_info=True)
+        raise typer.Exit(code=1)

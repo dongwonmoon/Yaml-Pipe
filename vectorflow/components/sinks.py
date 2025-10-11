@@ -93,7 +93,7 @@ class LanceDBSink(BaseSink):
                 )
                 db.drop_table(self.table_name)
                 table = db.create_table(self.table_name, schema=pyarrow_schema)
-        except FileNotFoundError:
+        except ValueError:  # ValueError? FileNotFoundError?
             logger.info(f"Table '{self.table_name}' not found. Creating new table.")
             table = db.create_table(self.table_name, schema=pyarrow_schema)
 
