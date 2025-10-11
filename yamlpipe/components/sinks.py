@@ -69,6 +69,34 @@ class LanceDBSink(BaseSink):
         self.table_name = table_name
         logger.debug(f"Initialized LanceDBSink with uri='{uri}', table='{table_name}'")
 
+    def _handle_schema_mismatch(self, db, table, new_schema):
+        logger.warning(
+            f"Schema mismatch for table '{self.table_name}'. Starting migration..."
+        )
+
+        temp_table_name = f"{self.table_name}_temp_{uuid.uuid4().hex[:6]}"
+        logger.info(f"Creating temporary table: {temp_table_name}")
+        temp_table = db.create_table(temp_table_name, schema=new_schema)
+
+        logger.info(f"Migrating old data from '{self.table_name}'...")
+        old_data = table.to_pandas()
+
+        if not old_data.empty:
+            migrated_df = pd.DataFrame(old_data).reindex(columns=new_schema.names)
+            temp_table.add(migrated_df)
+            logger.info(f"Migrated {len(old_data)} records to temporary table.")
+
+        logger.info(f"Replacing old table with new one...")
+        db.drop_table(self.table_name)
+        new_table = db.create_table(self.table_name, schema=new_schema)
+        if not old_data.empty:
+            new_table.add(old_data)
+
+        db.drop_table(temp_table_name, ignore_missing=True)
+
+        logger.info("✅ Schema migration successful.")
+        return new_table
+
     def sink(self, documents: List[Document]):
         """Sinks the given documents into a LanceDB table."""
         if not documents:
@@ -100,12 +128,10 @@ class LanceDBSink(BaseSink):
         try:
             table = db.open_table(self.table_name)
             if table.schema != pyarrow_schema:
-                logger.warning(
-                    f"Schema mismatch for table '{self.table_name}'. Recreating table."
-                )
-                db.drop_table(self.table_name)
-                table = db.create_table(self.table_name, schema=pyarrow_schema)
+                table = self._handle_schema_mismatch(db, table, pyarrow_schema)
         except ValueError:
+            if "migration required" in str(e).lower():
+                raise
             logger.info(f"Table '{self.table_name}' not found. Creating new table.")
             table = db.create_table(self.table_name, schema=pyarrow_schema)
 
