@@ -134,8 +134,8 @@ def status():
 
 
 @app.command(name="list-components")
-def list_componenets():
-    """ """
+def list_components():
+    """Lists all available components that can be used in the pipeline."""
     logger.info("Listing available components...")
 
     def print_registry(title, registry):
@@ -229,7 +229,7 @@ def eval(
         str, typer.Argument(help="Path to the evaluation dataset (.jsonl file).")
     ],
     config_path: str = typer.Option(
-        "pipeline.yml",
+        "pipeline.yaml",
         "-c",
         help="Path to the configuration file to use for the evaluation.",
     ),

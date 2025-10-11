@@ -37,7 +37,12 @@ class BaseChunker(ABC):
 
 
 class RecursiveCharacterChunker(BaseChunker):
-    """A chunker that splits text recursively by characters."""
+    """
+    A chunker that splits text recursively by a list of specified characters.
+
+    This method is effective for maintaining semantic coherence by trying to
+    split on sentence- and paragraph-level boundaries first.
+    """
 
     def __init__(self, chunk_size: int = 100, chunk_overlap: int = 20):
         """
@@ -62,15 +67,17 @@ class RecursiveCharacterChunker(BaseChunker):
     def chunk(self, document: Document) -> list[Document]:
         """Splits a document's content into chunks using a recursive character splitter."""
         source = document.metadata.get("source", "unknown")
-        logger.info(f"Recursively splitting document from source: {source}")
+        if not document.content or not document.content.strip():
+            logger.warning(f"Document from source '{source}' is empty. Skipping chunking.")
+            return []
+
+        logger.debug(f"Recursively splitting document from source: {source}")
         text_chunks = self._text_splitter.split_text(document.content)
 
         chunked_documents = []
         for i, text_chunk in enumerate(text_chunks):
-            # Copy original metadata and add chunk-specific info
             new_metadata = document.metadata.copy()
             new_metadata["chunk_index"] = i + 1
-
             chunked_doc = Document(content=text_chunk, metadata=new_metadata)
             chunked_documents.append(chunked_doc)
 
@@ -79,7 +86,12 @@ class RecursiveCharacterChunker(BaseChunker):
 
 
 class MarkdownChunker(BaseChunker):
-    """A chunker that splits text based on Markdown headers."""
+    """
+    A chunker that splits text based on Markdown headers.
+
+    This is useful for preserving the structure of documentation or other
+    Markdown-formatted text, using headers as logical section breaks.
+    """
 
     def __init__(self):
         """Initializes the Markdown chunker."""
@@ -96,20 +108,25 @@ class MarkdownChunker(BaseChunker):
     def chunk(self, document: Document) -> List[Document]:
         """Splits a document based on Markdown header structure."""
         source = document.metadata.get("source", "unknown")
-        logger.info(f"Splitting Markdown document from source: {source}")
+        if not document.content or not document.content.strip():
+            logger.warning(f"Document from source '{source}' is empty. Skipping chunking.")
+            return []
 
-        text_chunks = self._splitter.split_text(document.content)
-
-        chunked_documents = [
-            Document(
-                content=chunk.page_content,
-                # Combine original metadata with metadata from the splitter (e.g., headers)
-                metadata={**document.metadata.copy(), **chunk.metadata},
-            )
-            for chunk in text_chunks
-        ]
-        logger.debug(f"Created {len(chunked_documents)} chunks from source: {source}")
-        return chunked_documents
+        logger.debug(f"Splitting Markdown document from source: {source}")
+        try:
+            text_chunks = self._splitter.split_text(document.content)
+            chunked_documents = [
+                Document(
+                    content=chunk.page_content,
+                    metadata={**document.metadata.copy(), **chunk.metadata},
+                )
+                for chunk in text_chunks
+            ]
+            logger.debug(f"Created {len(chunked_documents)} chunks from source: {source}")
+            return chunked_documents
+        except Exception as e:
+            logger.error(f"Failed to split Markdown for source '{source}': {e}", exc_info=True)
+            return []
 
 
 class AdaptiveChunker(BaseChunker):
@@ -135,11 +152,10 @@ class AdaptiveChunker(BaseChunker):
     def _decide_strategy(self, document: Document) -> str:
         """Heuristically determines the best chunking strategy for a document."""
         content = document.content
-        # If the document contains at least two of any header level, it's likely Markdown.
         if (
-            content.count("\n#") >= 2
-            or content.count("\n##") >= 2
-            or content.count("\n###") >= 2
+            content.count("\n# ") >= 2
+            or content.count("\n## ") >= 2
+            or content.count("\n### ") >= 2
         ):
             return "markdown"
         else:

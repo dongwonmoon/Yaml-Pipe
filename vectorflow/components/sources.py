@@ -28,6 +28,10 @@ class BaseSource(ABC):
         """
         Loads data from the configured source and returns a list of Documents.
 
+        This method should handle fetching data, parsing it, and wrapping it
+        in Document objects. It should also interact with a StateManager to
+        avoid reprocessing unchanged data.
+
         Returns:
             List[Document]: A list of Document objects, each representing a loaded item.
         """
@@ -35,12 +39,23 @@ class BaseSource(ABC):
 
     @abstractmethod
     def test_connection(self):
-        """Tests the connection to the data source."""
+        """
+        Tests the connection to the data source to ensure it is accessible.
+
+        Raises:
+            Exception: If the connection test fails.
+        """
         pass
 
 
 class LocalFileSource(BaseSource):
-    """Loads documents from the local filesystem."""
+    """
+    Loads documents from the local filesystem.
+
+    This source scans a directory for files matching a glob pattern and uses the
+    `unstructured` library to parse их content. It tracks file modifications
+    using a StateManager to process only new or changed files.
+    """
 
     def __init__(self, path: str, glob_pattern: str, state_manager: StateManager):
         """
@@ -67,10 +82,13 @@ class LocalFileSource(BaseSource):
         logger.info(
             f"Scanning for files in '{self.path}' with pattern '{self.glob_pattern}'."
         )
+        if not self.path.is_dir():
+            logger.error(f"Source path '{self.path}' is not a valid directory. Aborting.")
+            return []
+
         all_files = [str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()]
         logger.debug(f"Found {len(all_files)} total files matching glob pattern.")
 
-        # Filter files based on whether they have changed
         new_or_changed_files = [
             f for f in all_files if self.state_manager.has_changed(f)
         ]
@@ -87,33 +105,40 @@ class LocalFileSource(BaseSource):
         for file_path_str in new_or_changed_files:
             try:
                 logger.debug(f"Partitioning file: {file_path_str}")
-                # Use unstructured.io to partition the file into elements
                 elements = partition(filename=file_path_str)
                 content = "\n\n".join([str(el) for el in elements])
 
+                if not content.strip():
+                    logger.warning(f"File '{file_path_str}' is empty or contains no text. Skipping.")
+                    continue
+
                 doc = Document(content=content, metadata={"source": file_path_str})
                 loaded_data.append(doc)
-                logger.info(
-                    f"Successfully loaded and partitioned file: {file_path_str}"
-                )
+                logger.debug(f"Successfully loaded and partitioned file: {file_path_str}")
 
             except Exception as e:
-                logger.error(f"Error processing file: {file_path_str}", exc_info=True)
+                logger.error(f"Error processing file '{file_path_str}': {e}", exc_info=True)
 
+        logger.info(f"Successfully loaded {len(loaded_data)} documents.")
         return loaded_data
 
     def test_connection(self):
+        """Tests if the source directory exists and is accessible."""
         logger.info(f"Testing connection for LocalFileSource at path: {self.path}")
         if not self.path.exists():
-            raise ValueError(f"Path '{self.path}' does not exist.")
+            raise FileNotFoundError(f"Source path '{self.path}' does not exist.")
         if not self.path.is_dir():
-            raise ValueError(f"'{self.path}' is not a directory.")
-
+            raise NotADirectoryError(f"Source path '{self.path}' is not a directory.")
         logger.info("Connection to LocalFileSource successful.")
 
 
 class WebSource(BaseSource):
-    """Loads documents from a web URL."""
+    """
+    Loads a document from a web URL.
+
+    This source fetches the content of a single web page, parses the HTML to
+    extract clean text, and returns it as one Document.
+    """
 
     def __init__(self, url: str):
         """
@@ -127,36 +152,38 @@ class WebSource(BaseSource):
 
     def load_data(self) -> List[Document]:
         """
-        Fetches the content from the specified URL, parses the text,
-        and returns it as a single Document.
+        Fetches content from the URL, parses it, and returns a single Document.
         """
         logger.info(f"Fetching content from URL: {self.url}")
         try:
-            response = requests.get(self.url)
-            response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+            response = requests.get(self.url, timeout=10)
+            response.raise_for_status()
 
-            # Use BeautifulSoup to parse HTML and extract clean text
             soup = BeautifulSoup(response.text, "html.parser")
             text = soup.get_text()
 
-            # Clean up whitespace
             lines = (line.strip() for line in text.splitlines())
             clean_text = "\n".join(line for line in lines if line)
+
+            if not clean_text.strip():
+                logger.warning(f"No text content found at URL: {self.url}")
+                return []
 
             doc = Document(content=clean_text, metadata={"source": self.url})
             logger.info(f"Successfully fetched and parsed content from: {self.url}")
             return [doc]
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to fetch content from URL: {self.url}", exc_info=True)
+            logger.error(f"Failed to fetch content from URL '{self.url}': {e}", exc_info=True)
             return []
 
     def test_connection(self):
+        """Tests if the web URL is reachable by sending a HEAD request."""
         logger.info(f"Testing connection for WebSource at URL: {self.url}")
         try:
             response = requests.head(self.url, timeout=5)
             response.raise_for_status()
             logger.info("Connection to WebSource successful.")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to connect to URL: {self.url}", exc_info=True)
-            raise ConnectionError(f"Failed to connect to URL: {self.url} - {e}")
+            logger.error(f"Failed to connect to URL '{self.url}': {e}", exc_info=True)
+            raise ConnectionError(f"Failed to connect to URL: {self.url}")
