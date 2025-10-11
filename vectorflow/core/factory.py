@@ -8,7 +8,7 @@ pipeline where components can be easily added or replaced via configuration.
 """
 
 import logging
-from ..components.sources import LocalFileSource, WebSource
+from ..components.sources import LocalFileSource, WebSource, S3Source
 from ..components.chunkers import (
     RecursiveCharacterChunker,
     MarkdownChunker,
@@ -20,7 +20,7 @@ from ..components.sinks import LanceDBSink, ChromaDBSink
 logger = logging.getLogger(__name__)
 
 # A registry mapping 'type' strings to their corresponding Source classes.
-SOURCE_REGISTRY = {"local_files": LocalFileSource, "web": WebSource}
+SOURCE_REGISTRY = {"local_files": LocalFileSource, "web": WebSource, "s3": S3Source}
 
 # A registry mapping 'type' strings to their corresponding Chunker classes.
 CHUNKER_REGISTRY = {

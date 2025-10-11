@@ -13,6 +13,8 @@ from bs4 import BeautifulSoup
 import logging
 from typing import List
 from unstructured.partition.auto import partition
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
 
 from ..core.state_manager import StateManager
 from ..core.data_models import Document
@@ -57,9 +59,7 @@ class LocalFileSource(BaseSource):
     using a StateManager to process only new or changed files.
     """
 
-    def __init__(
-        self, path: str, glob_pattern: str, state_manager: StateManager
-    ):
+    def __init__(self, path: str, glob_pattern: str, state_manager: StateManager):
         """
         Initializes the LocalFileSource.
 
@@ -90,12 +90,8 @@ class LocalFileSource(BaseSource):
             )
             return []
 
-        all_files = [
-            str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()
-        ]
-        logger.debug(
-            f"Found {len(all_files)} total files matching glob pattern."
-        )
+        all_files = [str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()]
+        logger.debug(f"Found {len(all_files)} total files matching glob pattern.")
 
         new_or_changed_files = [
             f for f in all_files if self.state_manager.has_changed(f)
@@ -122,9 +118,7 @@ class LocalFileSource(BaseSource):
                     )
                     continue
 
-                doc = Document(
-                    content=content, metadata={"source": file_path_str}
-                )
+                doc = Document(content=content, metadata={"source": file_path_str})
                 loaded_data.append(doc)
                 logger.debug(
                     f"Successfully loaded and partitioned file: {file_path_str}"
@@ -141,17 +135,11 @@ class LocalFileSource(BaseSource):
 
     def test_connection(self):
         """Tests if the source directory exists and is accessible."""
-        logger.info(
-            f"Testing connection for LocalFileSource at path: {self.path}"
-        )
+        logger.info(f"Testing connection for LocalFileSource at path: {self.path}")
         if not self.path.exists():
-            raise FileNotFoundError(
-                f"Source path '{self.path}' does not exist."
-            )
+            raise FileNotFoundError(f"Source path '{self.path}' does not exist.")
         if not self.path.is_dir():
-            raise NotADirectoryError(
-                f"Source path '{self.path}' is not a directory."
-            )
+            raise NotADirectoryError(f"Source path '{self.path}' is not a directory.")
         logger.info("Connection to LocalFileSource successful.")
 
 
@@ -193,9 +181,7 @@ class WebSource(BaseSource):
                 return []
 
             doc = Document(content=clean_text, metadata={"source": self.url})
-            logger.info(
-                f"Successfully fetched and parsed content from: {self.url}"
-            )
+            logger.info(f"Successfully fetched and parsed content from: {self.url}")
             return [doc]
 
         except requests.exceptions.RequestException as e:
@@ -213,7 +199,74 @@ class WebSource(BaseSource):
             response.raise_for_status()
             logger.info("Connection to WebSource successful.")
         except requests.exceptions.RequestException as e:
-            logger.error(
-                f"Failed to connect to URL '{self.url}': {e}", exc_info=True
-            )
+            logger.error(f"Failed to connect to URL '{self.url}': {e}", exc_info=True)
             raise ConnectionError(f"Failed to connect to URL: {self.url}")
+
+
+class S3Source(BaseSource):
+    def __init__(self, bucket: str, prefix: str, state_manager: StateManager):
+        self.bucket_name = bucket
+        self.prefix = prefix
+        self.state_manager = state_manager
+        self.s3_client = boto3.client("s3")
+
+    def load_data(self) -> List[Document]:
+        logger.info(f"Loading data from S3 bucket: {self.bucket_name}")
+
+        try:
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name, Prefix=self.prefix
+            )
+            all_objects = response.get("Contents", [])
+        except ClientError as e:
+            logger.error(f"Error listing objects in S3 bucket: {e}", exc_info=True)
+            return []
+
+        new_or_changed_objects = []
+        for obj in all_objects:
+            obj_key = obj["Key"]
+            obj_etag = obj["ETag"].strip('"')
+            last_etag = self.state_manager.state["processed_files"].get(
+                f"s3://{self.bucket_name}/{obj_key}"
+            )
+
+            if obj_etag != last_etag:
+                new_or_changed_objects.append(obj)
+
+        if not new_or_changed_objects:
+            logger.info("No new or changed objects detected.")
+            return []
+
+        logger.info(
+            f"Found {len(new_or_changed_objects)} new or changed objects to process."
+        )
+
+        loaded_documents = []
+        for obj in new_or_changed_objects:
+            obj_key = obj["Key"]
+            try:
+                response = self.s3_client.get_object(
+                    Bucket=self.bucket_name, Key=obj_key
+                )
+                content = response["Body"].read().decode("utf-8")
+                doc = Document(
+                    content=content,
+                    metadata={"source": f"s3://{self.bucket_name}/{obj_key}"},
+                )
+                loaded_documents.append(doc)
+
+            except Exception as e:
+                logger.error(f"Error loading object {obj_key}: {e}", exc_info=True)
+
+        return loaded_documents
+
+    def test_connection(self):
+        logger.info(f"Testing connection to S3 bucket: {self.bucket_name}")
+        try:
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+            logger.info("Connection to S3 bucket successful.")
+        except NoCredentialsError:
+            raise Exception("AWS credentials not found.")
+        except ClientError as e:
+            logger.error(f"Error testing connection to S3 bucket: {e}", exc_info=True)
+            raise ConnectionError(f"Failed to connect to S3 bucket: {self.bucket_name}")

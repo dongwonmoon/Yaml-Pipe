@@ -43,9 +43,7 @@ class StateManager:
             Dict: The loaded or newly created state dictionary.
         """
         if self.state_file_path.exists():
-            logger.debug(
-                f"Loading existing state from '{self.state_file_path}'"
-            )
+            logger.debug(f"Loading existing state from '{self.state_file_path}'")
             try:
                 with open(self.state_file_path, "r") as f:
                     return json.load(f)
