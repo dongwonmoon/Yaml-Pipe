@@ -15,6 +15,8 @@ from typing import List
 from unstructured.partition.auto import partition
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
+import psycopg2
+from psycopg2.extras import DictCursor
 
 from ..core.state_manager import StateManager
 from ..core.data_models import Document
@@ -270,3 +272,67 @@ class S3Source(BaseSource):
         except ClientError as e:
             logger.error(f"Error testing connection to S3 bucket: {e}", exc_info=True)
             raise ConnectionError(f"Failed to connect to S3 bucket: {self.bucket_name}")
+
+
+class PostgreSQLSource(BaseSource):
+    def __init__(self, host: str, database: str, user: str, password: str, query: str):
+        self.db_params = {
+            "host": host,
+            "database": database,
+            "user": user,
+            "password": password,
+        }
+        self.query = query
+
+    def load_data(self) -> List[Document]:
+        logger.info("Loading data from PostgreSQL database")
+        loaded_documents = []
+        conn = None
+
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            cur = conn.cursor(cursor_factory=DictCursor)
+            cur.execute(self.query)
+            rows = cur.fetchall()
+
+            if not rows:
+                logger.info("No data found in the database")
+                return []
+
+            for i, row in enumerate(rows):
+                row_dict = dict(row)
+
+                content_key = row.keys()[0]
+                content = row_dict.pop(content_key)
+
+                metadata = row_dict
+                metadata["source"] = (
+                    f"postgres://{self.db_params['user']}@{self.db_params['host']}/{self.db_params['database']}"
+                )
+
+                doc = Document(content=content, metadata=metadata)
+                loaded_documents.append(doc)
+
+            cur.close()
+            return loaded_documents
+
+        except psycopg2.Error as e:
+            logger.error(f"Error loading data from PostgreSQL: {e}", exc_info=True)
+            return []
+
+        finally:
+            if conn:
+                conn.close()
+
+    def test_connection(self):
+        logger.info("Testing connection to PostgreSQL database")
+        try:
+            conn = psycopg2.connect(**self.db_params)
+            conn.close()
+            logger.info("Connection to PostgreSQL successful")
+        except psycopg2.Error as e:
+            logger.error(f"Error testing connection to PostgreSQL: {e}", exc_info=True)
+            raise ConnectionError("Failed to connect to PostgreSQL")
+        finally:
+            if conn:
+                conn.close()
