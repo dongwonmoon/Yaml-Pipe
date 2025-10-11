@@ -38,8 +38,7 @@ app = typer.Typer(help="A flexible ETL pipeline for vector embeddings.")
 @app.command()
 def run(
     config_path: str = typer.Option(
-        "pipeline.yaml",
-        "--config-path",
+        "pipelines/pipeline.yaml",
         "-c",
         help="Path to the pipeline's YAML configuration file.",
     )

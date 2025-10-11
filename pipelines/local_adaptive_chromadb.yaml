@@ -1,0 +1,23 @@
+
+source:
+  type: local_files
+  config:
+    path: ./data
+    glob_pattern: "*.*"
+
+chunker:
+  type: adaptive
+  config:
+    chunk_size: 150
+    chunk_overlap: 30
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: chromadb
+  config:
+    path: "./chromadb_local_adaptive"
+    collection_name: "adaptive_documents"

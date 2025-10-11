@@ -1,0 +1,21 @@
+
+source:
+  type: local_files
+  config:
+    path: ./data
+    glob_pattern: "*.md"
+
+chunker:
+  type: markdown
+  config: {}
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: lancedb
+  config:
+    uri: "./lancedb_local_markdown"
+    table_name: "markdown_documents"

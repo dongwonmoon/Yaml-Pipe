@@ -1,0 +1,22 @@
+
+source:
+  type: web
+  config:
+    url: "https://example.com"
+
+chunker:
+  type: recursive_character
+  config:
+    chunk_size: 200
+    chunk_overlap: 40
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: lancedb
+  config:
+    uri: "./lancedb_web_lancedb"
+    table_name: "web_documents"
