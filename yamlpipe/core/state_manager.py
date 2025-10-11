@@ -136,3 +136,19 @@ class StateManager:
             logger.debug(
                 f"Updated state for '{file_path_str}' with hash {current_hash[:7]}..."
             )
+
+    def get_last_run_timestamp(self) -> str | None:
+        """
+        Retrieves the timestamp of the last run from the state.
+
+        Returns:
+            str | None: The timestamp as a string, or None if not found.
+        """
+        return self.state.get("last_run_timestamp")
+
+    def update_run_timestamp(self):
+        """
+        Updates the timestamp of the last run in the state."""
+        from datetime import datetime, timezone
+
+        self.state["last_run_timestamp"] = datetime.now(timezone.utc).isoformat()

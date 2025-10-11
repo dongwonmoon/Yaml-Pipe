@@ -37,23 +37,19 @@ def _build_components(config: dict, state_manager: StateManager) -> tuple:
         raise
 
 
-def _process_documents(source, chunker, embedder, sink, state_manager):
+def _process_documents(source, chunker, embedder, sink, state_manager, config):
     """Loads, processes, and sinks the documents."""
     logger.info(f"Loading data from source: {source.__class__.__name__}")
     documents_to_process = source.load_data()
 
     if not documents_to_process:
-        logger.info(
-            "No new or modified documents to process. Pipeline finished."
-        )
+        logger.info("No new or modified documents to process. Pipeline finished.")
         return
 
     logger.info(f"Loaded {len(documents_to_process)} new/modified documents.")
 
     logger.info(f"Chunking documents using: {chunker.__class__.__name__}")
-    all_chunks = [
-        chunk for doc in documents_to_process for chunk in chunker.chunk(doc)
-    ]
+    all_chunks = [chunk for doc in documents_to_process for chunk in chunker.chunk(doc)]
     logger.info(f"Total number of chunks created: {len(all_chunks)}")
 
     if not all_chunks:
@@ -74,11 +70,15 @@ def _process_documents(source, chunker, embedder, sink, state_manager):
     sink.sink(all_chunks)
 
     logger.info("Updating state for processed files...")
-    for doc in documents_to_process:
-        source_identifier = doc.metadata.get("source")
-        if source_identifier:
-            state_manager.update_state(source_identifier)
-            logger.debug(f"Updated state for source: {source_identifier}")
+    source_type = config.get("source", {}).get("type")
+    if source_type == "local_files" or source_type == "s3":
+        for doc in documents_to_process:
+            source_identifier = doc.metadata.get("source")
+            if source_identifier:
+                state_manager.update_state(source_identifier)
+                logger.debug(f"Updated state for source: {source_identifier}")
+    elif source_type == "postgres":
+        state_manager.update_run_timestamp()
     state_manager.save_state()
 
 
@@ -97,10 +97,8 @@ def run_pipeline(config_path: str):
             )
             return
 
-        source, chunker, embedder, sink = _build_components(
-            config, state_manager
-        )
-        _process_documents(source, chunker, embedder, sink, state_manager)
+        source, chunker, embedder, sink = _build_components(config, state_manager)
+        _process_documents(source, chunker, embedder, sink, state_manager, config)
 
         logger.info("YamlPipe pipeline completed successfully.")
 

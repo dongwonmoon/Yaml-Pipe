@@ -252,8 +252,8 @@ class S3Source(BaseSource):
         for obj in all_objects:
             obj_key = obj["Key"]
             # ETag is an identifier for a specific version of an object.
-            obj_etag = obj["ETag"].strip('\'')
-            
+            obj_etag = obj["ETag"].strip("'")
+
             # The source identifier for S3 objects is their full s3:// path.
             source_id = f"s3://{self.bucket_name}/{obj_key}"
             last_etag = self.state_manager.state["processed_files"].get(source_id)
@@ -315,12 +315,23 @@ class PostgreSQLSource(BaseSource):
     columns are added to the document's metadata.
     """
 
-    def __init__(self, host: str, database: str, user: str, password: str, query: str):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        database: str,
+        user: str,
+        password: str,
+        query: str,
+        state_manager: StateManager,
+        timestamp_column: str = "updated_at",
+    ):
         """
         Initializes the PostgreSQLSource with database connection details and a query.
 
         Args:
             host (str): The database host.
+            port (int): The database port.
             database (str): The name of the database.
             user (str): The username for authentication.
             password (str): The password for authentication.
@@ -328,11 +339,14 @@ class PostgreSQLSource(BaseSource):
         """
         self.db_params = {
             "host": host,
+            "port": port,
             "database": database,
             "user": user,
             "password": password,
         }
         self.query = query
+        self.state_manager = state_manager
+        self.timestamp_column = timestamp_column
 
     def load_data(self) -> List[Document]:
         """
@@ -340,6 +354,16 @@ class PostgreSQLSource(BaseSource):
         results as a list of Document objects.
         """
         logger.info("Loading data from PostgreSQL database")
+
+        last_run_ts = self.state_manager.get_last_run_timestamp()
+
+        final_query = self.query
+        if last_run_ts:
+            if "where" in self.query.lower():
+                final_query += f" AND {self.timestamp_column} > '{last_run_ts}'"
+            else:
+                final_query += f" WHERE {self.timestamp_column} > '{last_run_ts}'"
+
         loaded_documents = []
         conn = None
 
@@ -360,7 +384,7 @@ class PostgreSQLSource(BaseSource):
                 row_dict = dict(row)
 
                 # The first column is assumed to be the main content.
-                content_key = row.keys()[0]
+                content_key = list(row_dict.keys())[0]
                 content = row_dict.pop(content_key)
 
                 # The rest of the columns are treated as metadata.
