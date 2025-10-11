@@ -14,7 +14,7 @@ YamlPipe is a flexible ETL pipeline designed to streamline the process of conver
 
 1.  Clone the repository:
     ```bash
-    [git clone <repository-url>](https://github.com/dongwonmoon/Yaml-Pipe.git)
+    git clone https://github.com/dongwonmoon/Yaml-Pipe.git
     cd Yaml-Pipe
     ```
 
