@@ -1,4 +1,4 @@
-from vectorflow.cli import app
+from yamlpipe.cli import app
 
 if __name__ == "__main__":
     app()
