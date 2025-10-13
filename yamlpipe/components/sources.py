@@ -75,9 +75,7 @@ class LocalFileSource(BaseSource):
             logger.error(f"Source path '{self.path}' is not a valid directory.")
             return []
 
-        all_files = [
-            str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()
-        ]
+        all_files = [str(f) for f in self.path.glob(self.glob_pattern) if f.is_file()]
         new_or_changed_files = [
             f for f in all_files if self.state_manager.has_changed(f)
         ]
@@ -99,9 +97,7 @@ class LocalFileSource(BaseSource):
                 doc = Document(content=content, metadata={"source": file_path})
                 loaded_data.append(doc)
             except Exception as e:
-                logger.error(
-                    f"Error processing file '{file_path}': {e}", exc_info=True
-                )
+                logger.error(f"Error processing file '{file_path}': {e}", exc_info=True)
         return loaded_data
 
     def update_state(self, processed_docs: List[Document]):
@@ -111,17 +107,11 @@ class LocalFileSource(BaseSource):
                 self.state_manager.update_file_state(source_identifier)
 
     def test_connection(self):
-        logger.info(
-            f"Testing connection for LocalFileSource at path: {self.path}"
-        )
+        logger.info(f"Testing connection for LocalFileSource at path: {self.path}")
         if not self.path.exists():
-            raise FileNotFoundError(
-                f"Source path '{self.path}' does not exist."
-            )
+            raise FileNotFoundError(f"Source path '{self.path}' does not exist.")
         if not self.path.is_dir():
-            raise NotADirectoryError(
-                f"Source path '{self.path}' is not a directory."
-            )
+            raise NotADirectoryError(f"Source path '{self.path}' is not a directory.")
         logger.info("Connection to LocalFileSource successful.")
 
 
@@ -166,9 +156,7 @@ class WebSource(BaseSource):
             response.raise_for_status()
             logger.info("Connection to WebSource successful.")
         except requests.exceptions.RequestException as e:
-            raise ConnectionError(
-                f"Failed to connect to URL: {self.url}"
-            ) from e
+            raise ConnectionError(f"Failed to connect to URL: {self.url}") from e
 
 
 class S3Source(BaseSource):
@@ -190,26 +178,20 @@ class S3Source(BaseSource):
             )
             all_objects = response.get("Contents", [])
         except ClientError as e:
-            logger.error(
-                f"Error listing objects in S3 bucket: {e}", exc_info=True
-            )
+            logger.error(f"Error listing objects in S3 bucket: {e}", exc_info=True)
             return []
 
         new_or_changed_objects = []
         for obj in all_objects:
             source_id = f"s3://{self.bucket_name}/{obj['Key']}"
-            if self.state_manager.has_changed(
-                source_id, obj["ETag"].strip("'")
-            ):
+            if self.state_manager.has_changed(source_id, obj["ETag"].strip("'")):
                 new_or_changed_objects.append(obj)
 
         if not new_or_changed_objects:
             logger.info("No new or changed objects detected in S3.")
             return []
 
-        logger.info(
-            f"Found {len(new_or_changed_objects)} new or changed objects."
-        )
+        logger.info(f"Found {len(new_or_changed_objects)} new or changed objects.")
 
         loaded_documents = []
         for obj in new_or_changed_objects:
@@ -228,9 +210,7 @@ class S3Source(BaseSource):
                 )
                 loaded_documents.append(doc)
             except Exception as e:
-                logger.error(
-                    f"Error loading object {obj_key}: {e}", exc_info=True
-                )
+                logger.error(f"Error loading object {obj_key}: {e}", exc_info=True)
 
         return loaded_documents
 
@@ -289,9 +269,7 @@ class PostgreSQLSource(BaseSource):
             if "where" in self.query.lower():
                 final_query += f" AND {self.timestamp_column} > '{last_run_ts}'"
             else:
-                final_query += (
-                    f" WHERE {self.timestamp_column} > '{last_run_ts}'"
-                )
+                final_query += f" WHERE {self.timestamp_column} > '{last_run_ts}'"
 
         loaded_documents = []
         try:
@@ -315,9 +293,7 @@ class PostgreSQLSource(BaseSource):
                         loaded_documents.append(doc)
             return loaded_documents
         except psycopg2.Error as e:
-            logger.error(
-                f"Error loading data from PostgreSQL: {e}", exc_info=True
-            )
+            logger.error(f"Error loading data from PostgreSQL: {e}", exc_info=True)
             return []
 
     def update_state(self, processed_docs: List[Document]):

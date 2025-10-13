@@ -27,9 +27,7 @@ def create_dynamic_pydantic_model(documents: List[Document]) -> Type[BaseModel]:
     Dynamically generates a Pydantic model from a list of documents.
     """
     if not documents:
-        raise ValueError(
-            "At least one document is required to create a schema."
-        )
+        raise ValueError("At least one document is required to create a schema.")
 
     logger.debug("Starting dynamic Pydantic model creation.")
 
@@ -61,9 +59,7 @@ def create_dynamic_pydantic_model(documents: List[Document]) -> Type[BaseModel]:
                     f"Unsupported type '{value_type}' for metadata key '{key}'."
                 )
 
-    DynamicDocumentModel = create_model(
-        "DynamicDocumentModel", **pydantic_fields
-    )
+    DynamicDocumentModel = create_model("DynamicDocumentModel", **pydantic_fields)
     logger.debug(
         f"Created DynamicDocumentModel with fields: {list(pydantic_fields.keys())}"
     )

@@ -114,6 +114,4 @@ class StateManager:
         return self.state.get("last_run_timestamp")
 
     def update_run_timestamp(self):
-        self.state["last_run_timestamp"] = datetime.now(
-            timezone.utc
-        ).isoformat()
+        self.state["last_run_timestamp"] = datetime.now(timezone.utc).isoformat()

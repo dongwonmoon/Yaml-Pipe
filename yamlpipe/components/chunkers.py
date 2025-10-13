@@ -83,9 +83,7 @@ class RecursiveCharacterChunker(BaseChunker):
             chunked_doc = Document(content=text_chunk, metadata=new_metadata)
             chunked_documents.append(chunked_doc)
 
-        logger.debug(
-            f"Created {len(chunked_documents)} chunks from source: {source}"
-        )
+        logger.debug(f"Created {len(chunked_documents)} chunks from source: {source}")
         return chunked_documents
 
 
@@ -157,9 +155,7 @@ class AdaptiveChunker(BaseChunker):
             chunk_overlap (int): The chunk overlap for the recursive chunker.
         """
         self._markdown_chunker = MarkdownChunker()
-        self._recursive_chunker = RecursiveCharacterChunker(
-            chunk_size, chunk_overlap
-        )
+        self._recursive_chunker = RecursiveCharacterChunker(chunk_size, chunk_overlap)
         logger.debug("Initialized AdaptiveChunker")
 
     def _decide_strategy(self, document: Document) -> str:
@@ -179,9 +175,7 @@ class AdaptiveChunker(BaseChunker):
         strategy = self._decide_strategy(document)
         source = document.metadata.get("source", "unknown")
 
-        logger.info(
-            f"Using '{strategy}' chunking strategy for source: {source}"
-        )
+        logger.info(f"Using '{strategy}' chunking strategy for source: {source}")
 
         if strategy == "markdown":
             return self._markdown_chunker.chunk(document)

@@ -29,9 +29,7 @@ class BaseEmbedder(ABC):
 class SentenceTransformerEmbedder(BaseEmbedder):
     """An embedder that uses the sentence-transformers library."""
 
-    def __init__(
-        self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-    ):
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         self.model_name = model_name
         self.model = self._load_model()
 
@@ -41,9 +39,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         try:
             # The model is downloaded from the Hugging Face Hub automatically.
             model = SentenceTransformer(self.model_name)
-            logger.info(
-                f"SentenceTransformer model '{self.model_name}' loaded."
-            )
+            logger.info(f"SentenceTransformer model '{self.model_name}' loaded.")
             return model
         except Exception as e:
             logger.error(
@@ -56,9 +52,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         if not chunks:
             return np.array([])
 
-        logger.info(
-            f"Embedding {len(chunks)} chunks using '{self.model_name}'..."
-        )
+        logger.info(f"Embedding {len(chunks)} chunks using '{self.model_name}'...")
         try:
             # The encode method returns a numpy array of embeddings.
             embeddings = self.model.encode(chunks, show_progress_bar=False)
@@ -71,9 +65,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
 class OpenAIEmbedder(BaseEmbedder):
     """An embedder that uses the OpenAI API."""
 
-    def __init__(
-        self, model_name: str = "text-embedding-3-small", api_key: str = None
-    ):
+    def __init__(self, model_name: str = "text-embedding-3-small", api_key: str = None):
         self.model_name = model_name
         # API key can be provided directly or via environment variable.
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -85,9 +77,7 @@ class OpenAIEmbedder(BaseEmbedder):
         if not chunks:
             return np.array([])
 
-        logger.info(
-            f"Embedding {len(chunks)} chunks using '{self.model_name}'..."
-        )
+        logger.info(f"Embedding {len(chunks)} chunks using '{self.model_name}'...")
         try:
             # Call the OpenAI API to get the embeddings.
             response = self.client.embeddings.create(

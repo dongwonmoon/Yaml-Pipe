@@ -57,9 +57,7 @@ def _process_documents(source, chunker, embedder, sink, state_manager, config):
     documents_to_process = source.load_data()
 
     if not documents_to_process:
-        logger.info(
-            "No new or modified documents to process. Pipeline finished."
-        )
+        logger.info("No new or modified documents to process. Pipeline finished.")
         return
 
     logger.info(f"Loaded {len(documents_to_process)} new/modified documents.")
@@ -113,12 +111,8 @@ def run_pipeline(config_path: str):
             logger.error("Configuration is empty. Aborting pipeline.")
             return
 
-        source, chunker, embedder, sink = _build_components(
-            config, state_manager
-        )
-        _process_documents(
-            source, chunker, embedder, sink, state_manager, config
-        )
+        source, chunker, embedder, sink = _build_components(config, state_manager)
+        _process_documents(source, chunker, embedder, sink, state_manager, config)
 
         logger.info("YamlPipe pipeline completed successfully.")
 

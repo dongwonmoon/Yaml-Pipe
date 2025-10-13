@@ -36,12 +36,8 @@ class Evaluator:
             db = lancedb.connect(self.sink_config["config"]["uri"])
             return db.open_table(self.sink_config["config"]["table_name"])
         elif self.sink_type == "chromadb":
-            client = chromadb.PersistentClient(
-                path=self.sink_config["config"]["path"]
-            )
-            return client.get_collection(
-                self.sink_config["config"]["collection_name"]
-            )
+            client = chromadb.PersistentClient(path=self.sink_config["config"]["path"])
+            return client.get_collection(self.sink_config["config"]["collection_name"])
         else:
             raise ValueError(f"Unsupported sink type: {self.sink_type}")
 

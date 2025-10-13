@@ -39,9 +39,7 @@ class LanceDBSink(BaseSink):
 
     def _handle_schema_mismatch(self, db, table, new_schema):
         """Handles schema migration by recreating the table."""
-        logger.warning(
-            f"Schema mismatch for table '{self.table_name}'. Migrating..."
-        )
+        logger.warning(f"Schema mismatch for table '{self.table_name}'. Migrating...")
         old_data = table.to_pandas()
         db.drop_table(self.table_name)
         new_table = db.create_table(self.table_name, schema=new_schema)
@@ -88,9 +86,7 @@ class LanceDBSink(BaseSink):
                 "text": doc.content,
                 "vector": doc.metadata.get("embedding"),
             }
-            record.update(
-                {k: v for k, v in doc.metadata.items() if k != "embedding"}
-            )
+            record.update({k: v for k, v in doc.metadata.items() if k != "embedding"})
             records.append(record)
 
         if records:
@@ -121,17 +117,13 @@ class ChromaDBSink(BaseSink):
         elif host and port:
             self.client = chromadb.HttpClient(host=host, port=port)
         else:
-            raise ValueError(
-                "Either 'path' or 'host' and 'port' must be provided."
-            )
+            raise ValueError("Either 'path' or 'host' and 'port' must be provided.")
 
     def sink(self, documents: List[Document]):
         if not documents:
             return
 
-        collection = self.client.get_or_create_collection(
-            name=self.collection_name
-        )
+        collection = self.client.get_or_create_collection(name=self.collection_name)
 
         # Delete existing records from the same sources.
         sources_to_delete = list(
@@ -150,9 +142,7 @@ class ChromaDBSink(BaseSink):
         # Prepare records for insertion.
         ids = [str(uuid.uuid4()) for _ in documents]
         contents = [doc.content for doc in documents]
-        embeddings = [
-            doc.metadata.get("embedding").tolist() for doc in documents
-        ]
+        embeddings = [doc.metadata.get("embedding").tolist() for doc in documents]
         metadatas = [doc.metadata.copy() for doc in documents]
         for meta in metadatas:
             meta.pop("embedding", None)
