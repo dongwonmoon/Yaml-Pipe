@@ -121,7 +121,7 @@ class StateManager:
             )
         return changed
 
-    def update_state(self, file_path_str: str):
+    def update_file_state(self, file_path_str: str):
         """
         Updates the state with the current hash of a file.
 

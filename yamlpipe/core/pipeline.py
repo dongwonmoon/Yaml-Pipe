@@ -75,7 +75,7 @@ def _process_documents(source, chunker, embedder, sink, state_manager, config):
         for doc in documents_to_process:
             source_identifier = doc.metadata.get("source")
             if source_identifier:
-                state_manager.update_state(source_identifier)
+                state_manager.update_file_state(source_identifier)
                 logger.debug(f"Updated state for source: {source_identifier}")
     elif source_type == "postgres":
         state_manager.update_run_timestamp()
