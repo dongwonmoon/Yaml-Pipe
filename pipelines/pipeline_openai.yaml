@@ -1,0 +1,22 @@
+source:
+  type: local_files
+  config:
+    path: ./data
+    glob_pattern: "*.txt"
+
+chunker:
+  type: recursive_character
+  config:
+    chunk_size: 500
+    chunk_overlap: 50
+
+embedder:
+  type: openai
+  config:
+    model_name: "text-embedding-3-small"
+
+sink:
+  type: chromadb
+  config:
+    path: "./chromadb_openai"
+    collection_name: "openai_docs"
