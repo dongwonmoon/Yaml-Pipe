@@ -7,6 +7,8 @@ the ETL pipeline to process text data into vector embeddings.
 """
 
 import logging
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
 from ..utils.config import load_config
 from .factory import (
     build_component,
@@ -16,8 +18,28 @@ from .factory import (
     SINK_REGISTRY,
 )
 from ..utils.state_manager import StateManager
+from ..utils.data_models import Document
 
 logger = logging.getLogger(__name__)
+
+
+def _process_document_chunk(doc, chunker, embedder):
+    """Processes a single document and its chunks."""
+    try:
+        chunks = chunker.chunk(doc)
+        if not chunks:
+            return []
+
+        chunk_contents = [chunk.content for chunk in chunks]
+        embeddings = embedder.embed(chunk_contents)
+
+        for i, chunk in enumerate(chunks):
+            chunk.metadata["embedding"] = embeddings[i]
+
+        return chunks
+    except Exception as e:
+        logger.error(f"Error processing document: {e}", exc_info=True)
+        return []
 
 
 def _build_components(config: dict, state_manager: StateManager) -> tuple:
@@ -39,6 +61,9 @@ def _build_components(config: dict, state_manager: StateManager) -> tuple:
 
 def _process_documents(source, chunker, embedder, sink, state_manager, config):
     """Loads, processes, and sinks the documents."""
+    max_workers = min(4, os.cpu_count() or 1)
+    logger.info(f"Use {max_workers} workers for parallel processing")
+
     logger.info(f"Loading data from source: {source.__class__.__name__}")
     documents_to_process = source.load_data()
 
@@ -49,7 +74,19 @@ def _process_documents(source, chunker, embedder, sink, state_manager, config):
     logger.info(f"Loaded {len(documents_to_process)} new/modified documents.")
 
     logger.info(f"Chunking documents using: {chunker.__class__.__name__}")
-    all_chunks = [chunk for doc in documents_to_process for chunk in chunker.chunk(doc)]
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(_process_document_chunk, doc, chunker, embedder)
+            for doc in documents_to_process
+        ]
+        all_chunks = []
+        logger.info("Processing chunks...")
+        for future in as_completed(futures):
+            result_chunks = future.result()
+            if result_chunks:
+                all_chunks.extend(result_chunks)
+
     logger.info(f"Total number of chunks created: {len(all_chunks)}")
 
     if not all_chunks:
