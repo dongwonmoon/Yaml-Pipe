@@ -13,45 +13,75 @@ from pathlib import Path
 from typing import Dict, Optional
 import logging
 from datetime import datetime, timezone
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
 
-class StateManager:
+class BaseStateManager(ABC):
     """
-    Manages the state of the pipeline, tracking processed items and their hashes.
+    An abstract base class for all state manager components.
     """
 
-    def __init__(self, state_file_path: str = ".yamlpipe_state.json"):
-        self.state_file_path = Path(state_file_path)
-        self.state = self._load_state()
+    @abstractmethod
+    def load_state(self) -> Dict:
+        """Load state from storage."""
+        pass
 
-    def _load_state(self) -> Dict:
+    @abstractmethod
+    def save_state(self, state: Dict):
+        """Saves the given state to storage."""
+        pass
+
+
+class JSONStateManager(BaseStateManager):
+    """
+    A state manager that stores state in a JSON file.
+    """
+
+    def __init__(self, path: str = ".yamlpipe_state.json"):
+        """Initialize JSON path."""
+        self.state_file_path = Path(path)
+
+    def load_state(self) -> Dict:
+        """
+        If the JSON file exists, it is read, otherwise a new state is created.
+        """
         if self.state_file_path.exists():
             logger.debug(f"Loading state from '{self.state_file_path}'")
             try:
                 with open(self.state_file_path, "r") as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError) as e:
-                logger.error(
-                    f"Error loading state file: {e}. Starting fresh.",
-                    exc_info=True,
-                )
-                return self._get_initial_state()
-        return self._get_initial_state()
+            except (json.JSONDecodeError, IOError):
+                logger.error("Error loading state file. Starting fresh.", exc_info=True)
+                return {"processed_files": {}, "last_run_timestamp": None}
 
-    def _get_initial_state(self) -> Dict:
-        logger.debug("Creating new state.")
-        return {"processed_items": {}, "last_run_timestamp": None}
+            logger.debug("Creating new state.")
+            return {"processed_files": {}, "last_run_timestamp": None}
 
-    def save_state(self):
+    def save_state(self, state: Dict):
+        """Save the given state to the JSON file."""
         logger.debug(f"Saving state to '{self.state_file_path}'")
         try:
             with open(self.state_file_path, "w") as f:
-                json.dump(self.state, f, indent=4)
+                json.dump(state, f, indent=4)
             logger.info(f"Pipeline state saved to '{self.state_file_path}'.")
         except IOError as e:
             logger.error(f"Error saving state file: {e}", exc_info=True)
+
+
+class StateManager:
+    """
+    Inject a backend (such as JSONStateManager) that will handle the actual state saving/loading.
+    """
+
+    def __init__(self, backend: BaseStateManager):
+        self.backend = backend
+        self.state = self.backend.load_state()
+
+    def save(self):
+        """Save current state through backend"""
+        self.backend.save_state(self.state)
 
     def get_file_hash(self, file_path: Path) -> Optional[str]:
         hash_obj = hashlib.sha256()

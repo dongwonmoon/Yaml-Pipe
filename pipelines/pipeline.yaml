@@ -21,3 +21,8 @@ sink:
   config:
     uri: "./lancedb_final"
     table_name: "my_documents"
+
+state_manager:
+  type: json
+  config:
+    path: ./.yamlpipe_state.json

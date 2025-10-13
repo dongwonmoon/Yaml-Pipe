@@ -16,9 +16,9 @@ from .factory import (
     CHUNKER_REGISTRY,
     EMBEDDER_REGISTRY,
     SINK_REGISTRY,
+    STATE_MANAGER_REGISTRY,
 )
-from ..utils.state_manager import StateManager
-from ..utils.data_models import Document
+from ..utils.state_manager import StateManager, BaseStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def _build_components(config: dict, state_manager: StateManager) -> tuple:
         raise
 
 
-def _process_documents(source, chunker, embedder, sink, state_manager, config):
+def _process_documents(source, chunker, embedder, sink, state_manager):
     """Loads, processes, and sinks the documents."""
     max_workers = min(4, os.cpu_count() or 1)
     logger.info(f"Using {max_workers} workers for parallel processing.")
@@ -95,7 +95,7 @@ def _process_documents(source, chunker, embedder, sink, state_manager, config):
 
     logger.info("Updating state for processed files...")
     source.update_state(processed_docs)
-    state_manager.save_state()
+    state_manager.save()
 
 
 def run_pipeline(config_path: str):
@@ -105,14 +105,19 @@ def run_pipeline(config_path: str):
     logger.info(f"YamlPipe pipeline starting with config: {config_path}")
 
     try:
-        state_manager = StateManager()
         config = load_config(config_path)
         if not config:
             logger.error("Configuration is empty. Aborting pipeline.")
             return
+        state_manager_config = config.get(
+            "state_manager",
+            {"type": "json", "config": {"path": ".yamlpipe_state.json"}},
+        )
+        state_backend = build_component(state_manager_config, STATE_MANAGER_REGISTRY)
+        state_manager = StateManager(backend=state_backend)
 
         source, chunker, embedder, sink = _build_components(config, state_manager)
-        _process_documents(source, chunker, embedder, sink, state_manager, config)
+        _process_documents(source, chunker, embedder, sink, state_manager)
 
         logger.info("YamlPipe pipeline completed successfully.")
 

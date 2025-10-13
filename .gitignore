@@ -215,5 +215,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-lancedb_final
+lancedb_*
 .yamlpipe_state.json

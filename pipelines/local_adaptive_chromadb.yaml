@@ -19,5 +19,6 @@ embedder:
 sink:
   type: chromadb
   config:
-    path: "./chromadb_local_adaptive"
-    collection_name: "adaptive_documents"
+    host: "localhost" 
+    port: 8000        
+    collection_name: "adaptive_docs"

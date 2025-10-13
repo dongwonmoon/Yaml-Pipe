@@ -22,10 +22,15 @@ from .core.evaluation import Evaluator
 from .utils.config import load_config
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
+
+def setup_logging(level: str = "INFO"):
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
 
 app = typer.Typer(help="A flexible ETL pipeline for vector embeddings.")
 
@@ -36,9 +41,18 @@ def run(
         "pipelines/pipeline.yaml",
         "-c",
         help="Path to the pipeline's YAML configuration file.",
-    )
+    ),
+    log_level: str = typer.Option(
+        "INFO",
+        "--log-level",
+        "-l",
+        help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).",
+    ),
 ):
     """Runs the YamlPipe embedding pipeline."""
+    setup_logging(level=log_level)
+
+    logger.info(f"Starting YamlPipe with log level: {log_level}")
     run_pipeline(config_path=config_path)
 
 
@@ -183,9 +197,7 @@ def clean(
 
 @app.command()
 def eval(
-    dataset_path: Annotated[
-        str, typer.Argument(help="Path to evaluation dataset.")
-    ],
+    dataset_path: Annotated[str, typer.Argument(help="Path to evaluation dataset.")],
     config_path: str = typer.Option("pipeline.yaml", "-c", help="Config path."),
     k: int = typer.Option(5, "--top-k", "-k", help="Top k results to check."),
 ):

@@ -18,5 +18,6 @@ embedder:
 sink:
   type: chromadb
   config:
-    path: "./chromadb_openai"
+    host: "localhost" 
+    port: 8000        
     collection_name: "openai_docs"

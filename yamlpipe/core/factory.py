@@ -21,6 +21,7 @@ from ..components.chunkers import (
 )
 from ..components.embedders import SentenceTransformerEmbedder, OpenAIEmbedder
 from ..components.sinks import LanceDBSink, ChromaDBSink
+from ..utils.state_manager import JSONStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,9 @@ EMBEDDER_REGISTRY = {
 
 # A registry mapping 'type' strings to their corresponding Sink classes.
 SINK_REGISTRY = {"lancedb": LanceDBSink, "chromadb": ChromaDBSink}
+
+# A registry mapping 'type' strings to their corresponding StateManager classes.
+STATE_MANAGER_REGISTRY = {"json": JSONStateManager}
 
 
 def build_component(component_config: dict, registry: dict):
