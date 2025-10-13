@@ -55,7 +55,10 @@ class LocalFileSource(BaseSource):
     """
 
     def __init__(
-        self, path: str, glob_pattern: str, state_manager: StateManager
+        self,
+        path: str,
+        glob_pattern: str,
+        state_manager: StateManager,
     ):
         self.path = Path(path)
         self.glob_pattern = glob_pattern

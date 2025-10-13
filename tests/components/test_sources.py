@@ -18,13 +18,10 @@ from yamlpipe.utils.data_models import Document
 
 @pytest.fixture
 def mock_state_manager():
-    """Fixture to create a mock StateManager."""
+    """Provides a mock StateManager that reports no changes."""
     manager = MagicMock()
     manager.has_changed.return_value = True
     return manager
-
-
-# --- Tests for LocalFileSource ---
 
 
 @patch("pathlib.Path.glob")
@@ -33,7 +30,7 @@ def mock_state_manager():
     return_value=[MagicMock(text="test content")],
 )
 def test_local_source_loads_data(mock_partition, mock_glob, mock_state_manager):
-    """Test that LocalFileSource loads data from files."""
+    """Tests that LocalFileSource can load data from the filesystem."""
     mock_file = MagicMock()
     mock_file.is_file.return_value = True
     mock_glob.return_value = [mock_file]
@@ -49,12 +46,9 @@ def test_local_source_loads_data(mock_partition, mock_glob, mock_state_manager):
     assert documents[0].content == "test content"
 
 
-# --- Tests for WebSource ---
-
-
 @patch("requests.get")
 def test_web_source_loads_data(mock_requests_get):
-    """Test that WebSource successfully fetches and parses a web page."""
+    """Tests that WebSource can fetch and parse a web page."""
     mock_response = MagicMock()
     mock_response.text = "<html><body><p>Hello world</p></body></html>"
     mock_requests_get.return_value = mock_response
@@ -66,12 +60,9 @@ def test_web_source_loads_data(mock_requests_get):
     assert "Hello world" in documents[0].content
 
 
-# --- Tests for S3Source ---
-
-
 @patch("boto3.client")
 def test_s3_source_loads_data(mock_boto3_client, mock_state_manager):
-    """Test that S3Source loads data from S3."""
+    """Tests that S3Source can load data from an S3 bucket."""
     mock_s3 = MagicMock()
     mock_boto3_client.return_value = mock_s3
     mock_s3.list_objects_v2.return_value = {
@@ -90,12 +81,9 @@ def test_s3_source_loads_data(mock_boto3_client, mock_state_manager):
     assert documents[0].content == "test content"
 
 
-# --- Tests for PostgreSQLSource ---
-
-
 @patch("psycopg2.connect")
 def test_postgres_source_loads_data(mock_psycopg2_connect, mock_state_manager):
-    """Test that PostgreSQLSource loads data from a database."""
+    """Tests that PostgreSQLSource can load data from a database."""
     mock_conn = MagicMock()
     mock_cur = MagicMock()
     mock_psycopg2_connect.return_value = mock_conn

@@ -1,8 +1,5 @@
 """
 Embedding components for the YamlPipe pipeline.
-
-This module contains classes responsible for converting text chunks
-into numerical vector embeddings using various models.
 """
 
 from abc import ABC, abstractmethod
@@ -11,6 +8,7 @@ import logging
 from openai import OpenAI
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 import os
@@ -25,16 +23,11 @@ class BaseEmbedder(ABC):
 
     @abstractmethod
     def embed(self, chunks: list[str]) -> np.ndarray:
-        """
-        Embeds a list of text chunks into a NumPy array of vectors.
-        """
         pass
 
 
 class SentenceTransformerEmbedder(BaseEmbedder):
-    """
-    An embedder that uses the sentence-transformers library from Hugging Face.
-    """
+    """An embedder that uses the sentence-transformers library."""
 
     def __init__(
         self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -43,11 +36,13 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         self.model = self._load_model()
 
     def _load_model(self) -> SentenceTransformer:
+        """Loads the SentenceTransformer model."""
         logger.debug(f"Loading SentenceTransformer model: '{self.model_name}'")
         try:
+            # The model is downloaded from the Hugging Face Hub automatically.
             model = SentenceTransformer(self.model_name)
             logger.info(
-                f"SentenceTransformer model '{self.model_name}' loaded successfully."
+                f"SentenceTransformer model '{self.model_name}' loaded."
             )
             return model
         except Exception as e:
@@ -59,52 +54,46 @@ class SentenceTransformerEmbedder(BaseEmbedder):
 
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:
-            logger.warning("Embedder received an empty list of chunks.")
             return np.array([])
 
         logger.info(
             f"Embedding {len(chunks)} chunks using '{self.model_name}'..."
         )
         try:
+            # The encode method returns a numpy array of embeddings.
             embeddings = self.model.encode(chunks, show_progress_bar=False)
-            logger.info(f"Finished embedding {len(chunks)} chunks.")
             return embeddings
         except Exception as e:
-            logger.error(
-                f"An error occurred during embedding: {e}", exc_info=True
-            )
+            logger.error(f"Error during embedding: {e}", exc_info=True)
             raise
 
 
 class OpenAIEmbedder(BaseEmbedder):
-    """
-    An embedder that uses the OpenAI API to generate embeddings.
-    """
+    """An embedder that uses the OpenAI API."""
 
     def __init__(
         self, model_name: str = "text-embedding-3-small", api_key: str = None
     ):
         self.model_name = model_name
+        # API key can be provided directly or via environment variable.
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key is required.")
         self.client = OpenAI(api_key=self.api_key)
-        logger.info(
-            f"Initialized OpenAIEmbedder with model '{self.model_name}'."
-        )
 
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:
-            logger.warning("Got an empty list of chunks.")
             return np.array([])
 
         logger.info(
             f"Embedding {len(chunks)} chunks using '{self.model_name}'..."
         )
         try:
+            # Call the OpenAI API to get the embeddings.
             response = self.client.embeddings.create(
                 input=chunks, model=self.model_name
             )
+            # Extract the embedding vectors from the response.
             embeddings = [item.embedding for item in response.data]
             return np.array(embeddings)
         except Exception as e:

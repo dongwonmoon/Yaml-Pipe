@@ -13,7 +13,7 @@ from yamlpipe.utils.data_models import Document
 
 @pytest.fixture
 def sample_documents():
-    """Fixture for a list of sample documents to be sinked."""
+    """Provides a list of sample Document objects for testing sinks."""
     return [
         Document(
             content="Doc 1",
@@ -32,7 +32,7 @@ def sample_documents():
 def test_lancedb_sink(
     mock_connect, mock_create_model, mock_to_schema, sample_documents
 ):
-    """Test LanceDBSink functionality."""
+    """Tests the basic functionality of the LanceDBSink."""
     mock_db = MagicMock()
     mock_table = MagicMock()
     mock_table.schema = MagicMock()
@@ -65,7 +65,7 @@ def test_chromadb_sink(
     sink_params,
     sample_documents,
 ):
-    """Test ChromaDBSink with both Persistent and Http clients."""
+    """Tests the ChromaDBSink with both PersistentClient and HttpClient."""
     mock_client = MagicMock()
     mock_collection = MagicMock()
 

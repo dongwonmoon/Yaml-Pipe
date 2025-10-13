@@ -9,6 +9,7 @@ from yamlpipe.components.chunkers import (
 
 @pytest.fixture
 def sample_document():
+    """Provides a sample Document object for testing."""
     return Document(
         content="This is a test sentence for our amazing chunker. It is a long sentence.",
         metadata={"source": "test.txt"},
@@ -16,7 +17,7 @@ def sample_document():
 
 
 def test_recursive_character_chunker(sample_document):
-    """Tests the RecursiveCharacterChunker."""
+    """Tests the RecursiveCharacterChunker to ensure it splits text correctly."""
     chunker = RecursiveCharacterChunker(chunk_size=30, chunk_overlap=5)
     chunks = chunker.chunk(sample_document)
     assert len(chunks) > 1
@@ -26,7 +27,7 @@ def test_recursive_character_chunker(sample_document):
 
 
 def test_markdown_chunker():
-    """Tests the MarkdownChunker."""
+    """Tests the MarkdownChunker to ensure it splits markdown content correctly."""
     doc = Document(
         content="# Header 1\n\nThis is a paragraph.\n\n## Header 2\n\n- List item 1\n- List item 2",
         metadata={"source": "test.md"},
@@ -39,7 +40,7 @@ def test_markdown_chunker():
 
 
 def test_adaptive_chunker(sample_document):
-    """Tests the AdaptiveChunker."""
+    """Tests the AdaptiveChunker to ensure it splits text based on semantic meaning."""
     chunker = AdaptiveChunker(chunk_size=30, chunk_overlap=5)
     chunks = chunker.chunk(sample_document)
     assert len(chunks) > 1

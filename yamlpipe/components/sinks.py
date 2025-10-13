@@ -7,7 +7,6 @@ import pandas as pd
 import logging
 import uuid
 from typing import List
-from collections import defaultdict
 
 import lancedb
 from lancedb.pydantic import pydantic_to_schema
@@ -37,37 +36,24 @@ class LanceDBSink(BaseSink):
     def __init__(self, uri: str, table_name: str):
         self.uri = uri
         self.table_name = table_name
-        logger.debug(
-            f"Initialized LanceDBSink with uri='{uri}', table='{table_name}'"
-        )
 
     def _handle_schema_mismatch(self, db, table, new_schema):
+        """Handles schema migration by recreating the table."""
         logger.warning(
             f"Schema mismatch for table '{self.table_name}'. Migrating..."
         )
         old_data = table.to_pandas()
-        logger.info(f"Backing up {len(old_data)} records.")
         db.drop_table(self.table_name)
-        logger.info("Old table dropped.")
         new_table = db.create_table(self.table_name, schema=new_schema)
         if not old_data.empty:
             new_table.add(old_data)
-            logger.info("Data migrated to new schema.")
         return new_table
 
     def sink(self, documents: List[Document]):
         if not documents:
-            logger.warning("No documents to sink.")
             return
 
-        logger.info(
-            f"Sinking {len(documents)} documents to LanceDB table '{self.table_name}' at '{self.uri}'"
-        )
-        try:
-            db = lancedb.connect(self.uri)
-        except Exception as e:
-            raise ConnectionError(f"Could not connect to LanceDB: {e}") from e
-
+        db = lancedb.connect(self.uri)
         DynamicModel = create_dynamic_pydantic_model(documents)
         pyarrow_schema = pydantic_to_schema(DynamicModel)
 
@@ -76,11 +62,9 @@ class LanceDBSink(BaseSink):
             if table.schema != pyarrow_schema:
                 table = self._handle_schema_mismatch(db, table, pyarrow_schema)
         except (FileNotFoundError, ValueError):
-            logger.info(
-                f"Table '{self.table_name}' not found. Creating new table."
-            )
             table = db.create_table(self.table_name, schema=pyarrow_schema)
 
+        # Delete existing records from the same sources to prevent duplicates.
         sources_to_delete = list(
             set(
                 doc.metadata.get("source")
@@ -92,16 +76,12 @@ class LanceDBSink(BaseSink):
             where_clause = " OR ".join(
                 [f"source = '{source}'" for source in sources_to_delete]
             )
-            logger.info(
-                f"Deleting existing records from sources: {sources_to_delete}"
-            )
             try:
                 table.delete(where=where_clause)
             except Exception as e:
-                logger.warning(
-                    f"Could not delete records: {e}. This might be okay if the table was empty."
-                )
+                logger.warning(f"Could not delete records: {e}")
 
+        # Prepare records for insertion.
         records = []
         for doc in documents:
             record = {
@@ -114,19 +94,12 @@ class LanceDBSink(BaseSink):
             records.append(record)
 
         if records:
-            logger.info(
-                f"Adding {len(records)} new records to table '{self.table_name}'."
-            )
             table.add(pd.DataFrame(records))
 
-        logger.info("Finished sinking data to LanceDB.")
-
     def test_connection(self):
-        logger.info(f"Testing connection to LanceDB at URI: {self.uri}")
         try:
             db = lancedb.connect(self.uri)
             db.table_names()
-            logger.info("Connection to LanceDB successful.")
         except Exception as e:
             raise ConnectionError(f"Failed to connect to LanceDB: {e}") from e
 
@@ -142,27 +115,25 @@ class ChromaDBSink(BaseSink):
         port: int = None,
     ):
         self.collection_name = collection_name
+        # Support both on-disk and remote ChromaDB.
         if path:
             self.client = chromadb.PersistentClient(path=path)
         elif host and port:
             self.client = chromadb.HttpClient(host=host, port=port)
         else:
             raise ValueError(
-                "Either 'path' or both 'host' and 'port' must be provided for ChromaDBSink"
+                "Either 'path' or 'host' and 'port' must be provided."
             )
 
     def sink(self, documents: List[Document]):
         if not documents:
-            logger.warning("No documents to sink.")
             return
 
-        logger.info(
-            f"Sinking {len(documents)} documents to ChromaDB collection '{self.collection_name}'"
-        )
         collection = self.client.get_or_create_collection(
             name=self.collection_name
         )
 
+        # Delete existing records from the same sources.
         sources_to_delete = list(
             set(
                 doc.metadata.get("source")
@@ -171,16 +142,12 @@ class ChromaDBSink(BaseSink):
             )
         )
         if sources_to_delete:
-            logger.info(
-                f"Deleting existing records from sources: {sources_to_delete}"
-            )
             try:
                 collection.delete(where={"source": {"$in": sources_to_delete}})
             except Exception as e:
-                logger.warning(
-                    f"Could not delete records: {e}. This might be okay if the collection was empty."
-                )
+                logger.warning(f"Could not delete records: {e}")
 
+        # Prepare records for insertion.
         ids = [str(uuid.uuid4()) for _ in documents]
         contents = [doc.content for doc in documents]
         embeddings = [
@@ -190,26 +157,16 @@ class ChromaDBSink(BaseSink):
         for meta in metadatas:
             meta.pop("embedding", None)
 
-        logger.info(
-            f"Adding {len(documents)} new records to collection '{self.collection_name}'."
-        )
-        try:
+        if contents:
             collection.add(
                 ids=ids,
                 documents=contents,
                 metadatas=metadatas,
                 embeddings=embeddings,
             )
-            logger.info("Finished sinking data to ChromaDB.")
-        except Exception as e:
-            logger.error(
-                f"Error adding records to ChromaDB: {e}", exc_info=True
-            )
 
     def test_connection(self):
-        logger.info("Testing connection to ChromaDB")
         try:
             self.client.heartbeat()
-            logger.info("Connection to ChromaDB successful.")
         except Exception as e:
             raise ConnectionError(f"Failed to connect to ChromaDB: {e}") from e

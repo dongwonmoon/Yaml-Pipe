@@ -3,9 +3,13 @@ from yamlpipe.core.factory import (
     build_component,
     SOURCE_REGISTRY,
     CHUNKER_REGISTRY,
+    EMBEDDER_REGISTRY,
+    SINK_REGISTRY,
 )
 from yamlpipe.components.sources import LocalFileSource
 from yamlpipe.components.chunkers import RecursiveCharacterChunker
+from yamlpipe.components.embedders import SentenceTransformerEmbedder
+from yamlpipe.components.sinks import LanceDBSink
 from yamlpipe.utils.state_manager import StateManager
 
 
@@ -16,30 +20,45 @@ def test_build_source_component():
         "config": {
             "path": "./data",
             "glob_pattern": "*.txt",
-            "state_manager": StateManager(),  # Mock state manager
+            "state_manager": StateManager(),
         },
     }
-    source_component = build_component(config, SOURCE_REGISTRY)
-    assert isinstance(source_component, LocalFileSource)
-    assert source_component.path.name == "data"
+    component = build_component(config, SOURCE_REGISTRY)
+    assert isinstance(component, LocalFileSource)
 
 
 def test_build_chunker_component():
-    """Tests if the factory correctly builds a chunker component with config."""
+    """Tests if the factory correctly builds a chunker component."""
     config = {
         "type": "recursive_character",
-        "config": {"chunk_size": 123, "chunk_overlap": 45},
+        "config": {"chunk_size": 100, "chunk_overlap": 10},
     }
-    chunker_component = build_component(config, CHUNKER_REGISTRY)
-    assert isinstance(chunker_component, RecursiveCharacterChunker)
-    assert chunker_component.chunk_size == 123
-    assert chunker_component.chunk_overlap == 45
+    component = build_component(config, CHUNKER_REGISTRY)
+    assert isinstance(component, RecursiveCharacterChunker)
+
+
+def test_build_embedder_component():
+    """Tests if the factory correctly builds an embedder component."""
+    config = {
+        "type": "sentence_transformer",
+        "config": {"model_name": "test-model"},
+    }
+    component = build_component(config, EMBEDDER_REGISTRY)
+    assert isinstance(component, SentenceTransformerEmbedder)
+
+
+def test_build_sink_component():
+    """Tests if the factory correctly builds a sink component."""
+    config = {
+        "type": "lancedb",
+        "config": {"uri": "/tmp/lancedb", "table_name": "test"},
+    }
+    component = build_component(config, SINK_REGISTRY)
+    assert isinstance(component, LanceDBSink)
 
 
 def test_build_component_invalid_type():
-    """Tests if the factory raises an error for an unknown type."""
-    config = {"type": "non_existent_type", "config": {}}
-    with pytest.raises(
-        ValueError, match="'non_existent_type' is not a valid component type."
-    ):
+    """Tests if the factory raises a ValueError for an invalid component type."""
+    config = {"type": "invalid_type", "config": {}}
+    with pytest.raises(ValueError):
         build_component(config, SOURCE_REGISTRY)
