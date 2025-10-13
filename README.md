@@ -7,15 +7,19 @@ YamlPipe is a flexible ETL pipeline designed to streamline the process of conver
 - **YAML-based Configuration**: Easily define your pipeline's components and their parameters in a `pipeline.yaml` file.
 - **Pluggable Components**: Swap out components for different data sources, chunking strategies, embedding models, and data sinks.
 - **Extensible**: Designed to be easily extended with new components.
-- **Multiple Data Sources**: Load data from local files (`LocalFileSource`) or web pages (`WebSource`).
-- **Vector Database Sink**: Currently supports sinking data into [LanceDB](https://lancedb.github.io/lancedb/).
+- **Multiple Data Sources**: Load data from local files (`local_files`), web pages (`web`), S3 buckets (`s3`), and PostgreSQL databases (`postgres`).
+- **Advanced Chunking**: Choose from `recursive_character`, `markdown`, or `adaptive` chunking strategies.
+- **Multiple Embedding Models**: Use `sentence_transformer` or `openai` models.
+- **Multiple Vector Databases**: Sink data into `lancedb` or `chromadb`.
+- **CLI**: A powerful CLI to run pipelines, manage projects, and test components.
+- **Web UI**: A Streamlit-based dashboard to run pipelines and test search.
 
 ## Installation
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/dongwonmoon/Yaml-Pipe.git
-    cd Yaml-Pipe
+    git clone https://github.com/your-username/vector-flow.git
+    cd vector-flow
     ```
 
 2.  Install the required dependencies:
@@ -23,41 +27,76 @@ YamlPipe is a flexible ETL pipeline designed to streamline the process of conver
     pip install -r requirements.txt
     ```
 
+3.  To use the Web UI, install the UI-specific dependencies:
+    ```bash
+    pip install -r requirements-ui.txt
+    ```
+
 ## Usage
 
-You can run the embedding pipeline using the command-line interface.
+### Command-Line Interface
 
-1.  **Run the default pipeline:**
+YamlPipe provides a powerful CLI for managing your projects.
 
-    This command uses the `pipeline.yaml` file, which reads from a local text file.
+- **Initialize a new project:**
+  ```bash
+  python main.py init
+  ```
 
-    ```bash
-    python main.py run
-    ```
+- **Run a pipeline:**
+  ```bash
+  python main.py run -c pipelines/pipeline.yaml
+  ```
 
-2.  **Run a different pipeline:**
+- **List available components:**
+  ```bash
+  python main.py list-components
+  ```
 
-    Use the `--config-path` (or `-c`) option to specify a different configuration file. The `pipeline_web.yaml` file is provided as an example to process data from a URL.
+- **Check the status of processed files:**
+  ```bash
+  python main.py status
+  ```
 
-    ```bash
-    python main.py run --config-path pipeline_web.yaml
-    ```
+- **Test the connection to a source or sink:**
+  ```bash
+  python main.py test-connection source -c pipelines/pipeline.yaml
+  ```
+
+- **Clean up generated files:**
+  ```bash
+  python main.py clean -c pipelines/pipeline.yaml --yes
+  ```
+
+- **Evaluate the pipeline:**
+  ```bash
+  python main.py eval eval_dataset.jsonl -c pipelines/pipeline.yaml
+  ```
+
+### Web Interface
+
+Run the Streamlit web interface for a more interactive experience.
+
+```bash
+streamlit run app.py
+```
 
 ## Configuration
 
-The pipeline is controlled by a YAML file (e.g., `pipeline.yaml`). It consists of four main sections: `source`, `chunker`, `embedder`, and `sink`.
+The pipeline is controlled by a YAML file. Here's an example with all available components:
 
 ```yaml
 source:
   type: local_files
   config:
-    path: ./data/vectorflow_intro.txt
+    path: ./data
+    glob_pattern: "*.txt"
 
 chunker:
-  type: recursive_character
+  type: adaptive
   config:
-    chunk_size: 150
-    chunk_overlap: 30
+    chunk_size: 200
+    chunk_overlap: 40
 
 embedder:
   type: sentence_transformer
@@ -65,21 +104,13 @@ embedder:
     model_name: "jhgan/ko-sbert-nli"
 
 sink:
-  type: lancedb
+  type: chromadb
   config:
-    uri: "./lancedb_final"
-    table_name: "my_documents"
+    path: "./chroma_data"
+    collection_name: "my_documents"
 ```
 
-- **`source`**: Defines where to get the data from.
-  - `type`: `local_files` or `web`.
-  - `config`: Parameters for the source type (e.g., `path` for files, `url` for web).
-- **`chunker`**: Defines how to split the text into smaller pieces.
-  - `type`: `recursive_character`.
-  - `config`: Parameters for the chunker (e.g., `chunk_size`).
-- **`embedder`**: Defines the model to use for creating vector embeddings.
-  - `type`: `sentence_transformer`.
-  - `config`: Parameters for the embedder (e.g., `model_name`).
-- **`sink`**: Defines where to store the final text chunks and their embeddings.
-  - `type`: `lancedb`.
-  - `config`: Parameters for the sink (e.g., database `uri` and `table_name`).
+- **`source`**: `local_files`, `web`, `s3`, `postgres`
+- **`chunker`**: `recursive_character`, `markdown`, `adaptive`
+- **`embedder`**: `sentence_transformer`, `openai`
+- **`sink`**: `lancedb`, `chromadb`
