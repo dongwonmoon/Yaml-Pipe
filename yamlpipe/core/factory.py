@@ -14,7 +14,7 @@ from ..components.chunkers import (
     MarkdownChunker,
     AdaptiveChunker,
 )
-from ..components.embedders import SentenceTransformerEmbedder
+from ..components.embedders import SentenceTransformerEmbedder, OpenAIEmbedder
 from ..components.sinks import LanceDBSink, ChromaDBSink
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ CHUNKER_REGISTRY = {
 # A registry mapping 'type' strings to their corresponding Embedder classes.
 EMBEDDER_REGISTRY = {
     "sentence_transformer": SentenceTransformerEmbedder,
+    "openai": OpenAIEmbedder,
 }
 
 # A registry mapping 'type' strings to their corresponding Sink classes.

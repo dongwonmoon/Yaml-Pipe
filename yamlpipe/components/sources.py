@@ -153,7 +153,7 @@ class WebSource(BaseSource):
     extract clean text, and returns it as one Document.
     """
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, **kwargs):
         """
         Initializes the WebSource.
 
