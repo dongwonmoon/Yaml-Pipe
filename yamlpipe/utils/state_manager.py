@@ -14,6 +14,7 @@ from typing import Dict, Optional
 import logging
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,60 @@ class JSONStateManager(BaseStateManager):
             logger.info(f"Pipeline state saved to '{self.state_file_path}'.")
         except IOError as e:
             logger.error(f"Error saving state file: {e}", exc_info=True)
+
+
+class RedisStateManager(BaseStateManager):
+    """
+    A class that manages the state of the pipeline using Redis.
+    """
+
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 6379,
+        db: int = 0,
+        state_key: str = "yamlpipe_state",
+    ):
+        """
+        Initialize the Redis state manager.
+        """
+        try:
+            self.redis_client = redis.Redis(
+                host=host, port=port, db=db, decode_responses=True
+            )
+            self.state_key = state_key
+            self.redis_client.ping()
+            logger.info(f"Connected to Redis at {host}:{port}")
+
+        except redis.exceptions.ConnectionError as e:
+            logger.error(f"Error connecting to Redis: {e}", exc_info=True)
+            raise
+
+    def load_state(self) -> Dict:
+        """
+        Load the state from Redis.
+        """
+        logger.debug(f"Loading state from Redis key '{self.state_key}'")
+        try:
+            existing_state = self.redis_client.get(self.state_key)
+            if existing_state:
+                return json.loads(existing_state)
+            else:
+                return {"processed_items": {}, "last_run_timestamp": None}
+        except redis.exceptions.RedisError as e:
+            logger.error(f"Error loading state from Redis: {e}", exc_info=True)
+            return {"processed_items": {}, "last_run_timestamp": None}
+
+    def save_state(self, state: Dict):
+        """
+        Save the state to Redis.
+        """
+        logger.debug(f"Saving state to Redis key '{self.state_key}'")
+        try:
+            self.redis_client.set(self.state_key, json.dumps(state))
+            logger.info(f"Pipeline state saved to Redis key '{self.state_key}'.")
+        except redis.exceptions.RedisError as e:
+            logger.error(f"Error saving state to Redis: {e}", exc_info=True)
 
 
 class StateManager:
