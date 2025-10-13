@@ -94,7 +94,8 @@ if source_type == "Local File Upload":
 
 elif source_type == "Website URL":
     url = st.text_input(
-        "Enter the URL of the website to process", "https://en.wikipedia.org/wiki/Artificial_intelligence"
+        "Enter the URL of the website to process",
+        "https://en.wikipedia.org/wiki/Artificial_intelligence",
     )
     if url:
         # Create config for WebSource
