@@ -1,0 +1,22 @@
+source:
+  type: s3
+  config:
+    bucket: "your-s3-bucket"
+    prefix: "your-s3-prefix"
+
+chunker:
+  type: recursive_character
+  config:
+    chunk_size: 200
+    chunk_overlap: 40
+
+embedder:
+  type: sentence_transformer
+  config:
+    model_name: "jhgan/ko-sbert-nli"
+
+sink:
+  type: lancedb
+  config:
+    uri: "./lancedb_s3"
+    table_name: "s3_documents"
