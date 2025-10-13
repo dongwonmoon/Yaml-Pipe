@@ -1,43 +1,68 @@
 import streamlit as st
 import yaml
 from pathlib import Path
-import os
-import time
 import logging
 import chromadb
+import lancedb
 
 from yamlpipe.core.pipeline import run_pipeline
-from yamlpipe.core.factory import build_component, EMBEDDER_REGISTRY, SINK_REGISTRY
+from yamlpipe.core.factory import build_component, EMBEDDER_REGISTRY
 from yamlpipe.utils.config import load_config
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-# --- UI 구성 ---
 
-st.set_page_config(page_title="YamlPipe Dashboard", layout="wide")
-st.title("🚀 YamlPipe: AI Data Pipeline Dashboard")
+class StreamlitLogHandler(logging.Handler):
+    """Custom logging handler to display logs in a Streamlit container."""
 
-st.markdown(
-    """
-Use this dashboard to run and test the core features of YamlPipe without the terminal. 
-Select a data source, run the pipeline, and then ask questions directly to the generated vector database!
-"""
-)
+    def __init__(self, container):
+        super().__init__()
+        self.container = container
 
-# --- 1. Data Source Selection Section ---
-st.header("1. Select Data Source")
-source_type = st.radio(
-    "What kind of data would you like to process?",
-    ("Local File Upload", "Website URL"),
-    horizontal=True,
-)
+    def emit(self, record):
+        self.container.text(self.format(record))
 
 
-# 임시 YAML 파일을 생성하고 관리하기 위한 함수
-def create_temp_pipeline_config(source_config):
-    """Function to create a temporary pipeline configuration"""
-    # 기본 템플릿
+class Searcher:
+    """A class to perform searches on a vector database."""
+
+    def __init__(self, embedder_config: dict, sink_config: dict):
+        self.embedder = build_component(embedder_config, EMBEDDER_REGISTRY)
+        self.sink_config = sink_config
+        self.retriever = self._init_retriever()
+
+    def _init_retriever(self):
+        sink_type = self.sink_config["type"]
+        if sink_type == "chromadb":
+            client = chromadb.HttpClient(
+                host=self.sink_config["config"]["host"],
+                port=self.sink_config["config"]["port"],
+            )
+            return client.get_collection(
+                name=self.sink_config["config"]["collection_name"]
+            )
+        elif sink_type == "lancedb":
+            db = lancedb.connect(self.sink_config["config"]["uri"])
+            return db.open_table(self.sink_config["config"]["table_name"])
+        else:
+            raise ValueError(f"Unsupported sink type: {sink_type}")
+
+    def search(self, query: str, k: int = 3):
+        query_vector = self.embedder.embed([query])[0]
+        sink_type = self.sink_config["type"]
+        if sink_type == "chromadb":
+            return self.retriever.query(
+                query_embeddings=[query_vector.tolist()], n_results=k
+            )
+        elif sink_type == "lancedb":
+            return self.retriever.search(query_vector).limit(k).to_df()
+
+
+def create_temp_pipeline_config(source_config: dict) -> str:
+    """Creates a temporary pipeline configuration file."""
     config_template = {
         "chunker": {
             "type": "adaptive",
@@ -52,14 +77,12 @@ def create_temp_pipeline_config(source_config):
             "config": {
                 "host": "localhost",
                 "port": 8000,
-                "collection_name": "my_server_collection",
+                "collection_name": "my_collection",
             },
         },
     }
-    # 소스 설정을 템플릿에 추가
     config_template["source"] = source_config
 
-    # 임시 폴더 및 파일 경로 설정
     temp_dir = Path("temp_ui")
     temp_dir.mkdir(exist_ok=True)
     config_path = temp_dir / "temp_pipeline.yaml"
@@ -70,146 +93,108 @@ def create_temp_pipeline_config(source_config):
     return str(config_path)
 
 
-source_config = None
-if source_type == "Local File Upload":
-    uploaded_files = st.file_uploader(
-        "Upload your document files (.txt, .md, .pdf, etc.)",
-        accept_multiple_files=True,
+def main():
+    """Main function to run the Streamlit app."""
+    st.set_page_config(page_title="YamlPipe Dashboard", layout="wide")
+    st.title("🚀 YamlPipe: AI Data Pipeline Dashboard")
+    st.markdown(
+        """Use this dashboard to run and test the core features of YamlPipe. 
+    Select a data source, run the pipeline, and then ask questions to the generated vector database!"""
     )
-    if uploaded_files:
-        # Create a temporary directory to store uploaded files
-        upload_dir = Path("temp_ui/uploads")
-        upload_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save files
-        for uploaded_file in uploaded_files:
-            with open(upload_dir / uploaded_file.name, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-
-        # Create config for LocalFileSource
-        source_config = {
-            "type": "local_files",
-            "config": {"path": str(upload_dir), "glob_pattern": "*.*"},
-        }
-
-elif source_type == "Website URL":
-    url = st.text_input(
-        "Enter the URL of the website to process",
-        "https://en.wikipedia.org/wiki/Artificial_intelligence",
+    # --- 1. Data Source Selection ---
+    st.header("1. Select Data Source")
+    source_type = st.radio(
+        "Select data source type:",
+        ("Local File Upload", "Website URL"),
+        horizontal=True,
     )
-    if url:
-        # Create config for WebSource
-        source_config = {"type": "web", "config": {"url": url}}
 
-# --- 2. Run Pipeline Section ---
-st.header("2. Run Pipeline")
+    source_config = None
+    if source_type == "Local File Upload":
+        uploaded_files = st.file_uploader(
+            "Upload documents", accept_multiple_files=True
+        )
+        if uploaded_files:
+            upload_dir = Path("temp_ui/uploads")
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            for uploaded_file in uploaded_files:
+                with open(upload_dir / uploaded_file.name, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+            source_config = {
+                "type": "local_files",
+                "config": {"path": str(upload_dir), "glob_pattern": "*.*"},
+            }
 
-if source_config:
-    if st.button("▶️ Run Pipeline"):
-        # 1. Create temporary config file
-        temp_config_path = create_temp_pipeline_config(source_config)
-        st.info(f"Temporary config file created: {temp_config_path}")
+    elif source_type == "Website URL":
+        url = st.text_input(
+            "Enter website URL",
+            "https://en.wikipedia.org/wiki/Artificial_intelligence",
+        )
+        if url:
+            source_config = {"type": "web", "config": {"url": url}}
 
-        # 2. Run pipeline and display logs
-        with st.spinner("Pipeline is running... Please wait..."):
-            log_container = st.expander("View Real-time Logs", expanded=True)
-            with log_container:
-                # Capture logs in a list instead of printing to console
-                logs = []
+    # --- 2. Run Pipeline ---
+    st.header("2. Run Pipeline")
+    if source_config:
+        if st.button("▶️ Run Pipeline"):
+            temp_config_path = create_temp_pipeline_config(source_config)
+            st.info(f"Temporary config file created: {temp_config_path}")
 
-                def log_message(message):
-                    logs.append(message)
-                    st.text(message)  # Display logs in real-time as text
+            with st.spinner("Pipeline is running..."):
+                log_container = st.expander(
+                    "View Real-time Logs", expanded=True
+                )
+                streamlit_handler = StreamlitLogHandler(log_container)
+                logging.getLogger().addHandler(streamlit_handler)
 
                 try:
-                    # Since run_pipeline uses logging, add a Streamlit handler
-                    class StreamlitLogHandler(logging.Handler):
-                        def __init__(self, container):
-                            super().__init__()
-                            self.container = container
-
-                        def emit(self, record):
-                            self.container.text(self.format(record))
-
-                    # Add handler to the root logger
-                    streamlit_handler = StreamlitLogHandler(log_container)
-                    logging.getLogger().addHandler(streamlit_handler)
-
                     run_pipeline(config_path=temp_config_path)
                     st.success("🎉 Pipeline executed successfully!")
-
-                    # Remove handler after use to prevent duplicate logging
+                    config = load_config(temp_config_path)
+                    st.session_state["sink_config"] = config["sink"]
+                    st.session_state["embedder_config"] = config["embedder"]
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
+                finally:
                     logging.getLogger().removeHandler(streamlit_handler)
 
-                    # Save sink and embedder info to session for the search feature
-                    st.session_state["sink_config"] = load_config(temp_config_path)[
-                        "sink"
-                    ]
-                    st.session_state["embedder_config"] = load_config(temp_config_path)[
-                        "embedder"
-                    ]
+    # --- 3. Search Test ---
+    st.header("3. Search Test")
+    if "sink_config" in st.session_state:
+        st.info("Pipeline has been executed. You can now test the search.")
+        query = st.text_input("Ask a question:")
 
-                except Exception as e:
-                    st.error(f"An error occurred during pipeline execution: {e}")
-
-# --- 3. Search Test Section ---
-st.header("3. Search Test")
-
-if "sink_config" in st.session_state:
-    st.info("Pipeline has been executed. You can now test the search below.")
-    query = st.text_input("Ask a question to the vector database:")
-
-    if query:
-        try:
-            # Reuse the evaluation logic for searching
-            with st.spinner("Searching..."):
-                embedder = build_component(
-                    st.session_state["embedder_config"], EMBEDDER_REGISTRY
-                )
-                sink_config = st.session_state["sink_config"]
-
-                # Create DB client (referencing Evaluator logic)
-                retriever = None
-                if sink_config["type"] == "chromadb":
-                    client = chromadb.HttpClient(
-                        host=sink_config["config"]["host"],
-                        port=sink_config["config"]["port"],
+        if query:
+            try:
+                with st.spinner("Searching..."):
+                    searcher = Searcher(
+                        st.session_state["embedder_config"],
+                        st.session_state["sink_config"],
                     )
-                    retriever = client.get_collection(
-                        name=sink_config["config"]["collection_name"]
-                    )
-                elif sink_config["type"] == "lancedb":
-                    import lancedb
-
-                    db = lancedb.connect(sink_config["config"]["uri"])
-                    retriever = db.open_table(sink_config["config"]["table_name"])
-
-                # Perform search
-                query_vector = embedder.embed([query])[0]
-
-                results = None
-                if sink_config["type"] == "chromadb":
-                    results = retriever.query(
-                        query_embeddings=[query_vector.tolist()], n_results=3
-                    )
+                    results = searcher.search(query)
                     st.subheader("🔍 Search Results (Top 3)")
-                    for i, (doc, meta) in enumerate(
-                        zip(results["documents"][0], results["metadatas"][0])
-                    ):
-                        st.markdown(f"**{i+1}. Source: `{meta.get('source', 'N/A')}`**")
-                        st.info(doc)
+                    if searcher.sink_config["type"] == "chromadb":
+                        for i, (doc, meta) in enumerate(
+                            zip(
+                                results["documents"][0], results["metadatas"][0]
+                            )
+                        ):
+                            st.markdown(
+                                f"**{i+1}. Source: `{meta.get('source', 'N/A')}`**"
+                            )
+                            st.info(doc)
+                    elif searcher.sink_config["type"] == "lancedb":
+                        for index, row in results.iterrows():
+                            st.markdown(
+                                f"**{index+1}. Source: `{row.get('source', 'N/A')}`**"
+                            )
+                            st.info(row["text"])
+            except Exception as e:
+                st.error(f"An error occurred during search: {e}")
+    else:
+        st.warning("Please run a pipeline first.")
 
-                elif sink_config["type"] == "lancedb":
-                    results = retriever.search(query_vector).limit(3).to_df()
-                    st.subheader("🔍 Search Results (Top 3)")
-                    for index, row in results.iterrows():
-                        st.markdown(
-                            f"**{index+1}. Source: `{row.get('source', 'N/A')}`**"
-                        )
-                        st.info(row["text"])
 
-        except Exception as e:
-            st.error(f"An error occurred during search: {e}")
-
-else:
-    st.warning("Please run a pipeline first to create the database.")
+if __name__ == "__main__":
+    main()

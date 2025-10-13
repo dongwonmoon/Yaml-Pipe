@@ -111,14 +111,18 @@ def status():
     state_file = Path(".yamlpipe_state.json")
 
     if not state_file.exists():
-        logger.warning("No state file found. Run a pipeline first to generate state.")
+        logger.warning(
+            "No state file found. Run a pipeline first to generate state."
+        )
         return
 
     try:
         with open(state_file, "r") as f:
             state = json.load(f)
     except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error reading state file '{state_file}': {e}", exc_info=True)
+        logger.error(
+            f"Error reading state file '{state_file}': {e}", exc_info=True
+        )
         return
 
     processed_files = state.get("processed_files", {})
@@ -184,8 +188,12 @@ def test_connection(
 
 @app.command()
 def clean(
-    config_path: str = typer.Option("pipeline.yaml", "-c", help="Config file to use."),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
+    config_path: str = typer.Option(
+        "pipeline.yaml", "-c", help="Config file to use."
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip confirmation prompt."
+    ),
 ):
     """Removes all generated files, including the state file and sink database."""
     logger.info("Starting cleanup process...")

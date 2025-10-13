@@ -23,22 +23,12 @@ from ..utils.data_models import Document
 logger = logging.getLogger(__name__)
 
 
-def _process_document_chunk(doc, chunker, embedder):
-    """Processes a single document and its chunks."""
+def _process_document_chunk(doc, chunker):
+    """Chunks a single document and returns the chunks."""
     try:
-        chunks = chunker.chunk(doc)
-        if not chunks:
-            return []
-
-        chunk_contents = [chunk.content for chunk in chunks]
-        embeddings = embedder.embed(chunk_contents)
-
-        for i, chunk in enumerate(chunks):
-            chunk.metadata["embedding"] = embeddings[i]
-
-        return chunks
+        return chunker.chunk(doc)
     except Exception as e:
-        logger.error(f"Error processing document: {e}", exc_info=True)
+        logger.error(f"Error chunking document: {e}", exc_info=True)
         return []
 
 
@@ -46,7 +36,6 @@ def _build_components(config: dict, state_manager: StateManager) -> tuple:
     """Builds all pipeline components based on the configuration."""
     logger.info("Building pipeline components...")
     try:
-        # Inject the state manager into the source component's configuration
         config["source"]["config"]["state_manager"] = state_manager
         source = build_component(config["source"], SOURCE_REGISTRY)
         chunker = build_component(config["chunker"], CHUNKER_REGISTRY)
@@ -62,43 +51,43 @@ def _build_components(config: dict, state_manager: StateManager) -> tuple:
 def _process_documents(source, chunker, embedder, sink, state_manager, config):
     """Loads, processes, and sinks the documents."""
     max_workers = min(4, os.cpu_count() or 1)
-    logger.info(f"Use {max_workers} workers for parallel processing")
+    logger.info(f"Using {max_workers} workers for parallel processing.")
 
     logger.info(f"Loading data from source: {source.__class__.__name__}")
     documents_to_process = source.load_data()
 
     if not documents_to_process:
-        logger.info("No new or modified documents to process. Pipeline finished.")
+        logger.info(
+            "No new or modified documents to process. Pipeline finished."
+        )
         return
 
     logger.info(f"Loaded {len(documents_to_process)} new/modified documents.")
 
     logger.info(f"Chunking documents using: {chunker.__class__.__name__}")
-
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(_process_document_chunk, doc, chunker, embedder)
+        futures = {
+            executor.submit(_process_document_chunk, doc, chunker): doc
             for doc in documents_to_process
-        ]
+        }
         all_chunks = []
+        processed_docs = []
         logger.info("Processing chunks...")
         for future in as_completed(futures):
             result_chunks = future.result()
             if result_chunks:
                 all_chunks.extend(result_chunks)
+                processed_docs.append(futures[future])
 
     logger.info(f"Total number of chunks created: {len(all_chunks)}")
 
     if not all_chunks:
-        logger.info(
-            "No chunks were created from the documents. Nothing to embed or sink."
-        )
+        logger.info("No chunks were created. Nothing to embed or sink.")
         return
 
     logger.info(f"Generating embeddings using: {embedder.__class__.__name__}")
     chunk_contents = [chunk.content for chunk in all_chunks]
     embeddings = embedder.embed(chunk_contents)
-    logger.debug(f"Embeddings generated with shape: {embeddings.shape}")
 
     for i, chunk in enumerate(all_chunks):
         chunk.metadata["embedding"] = embeddings[i]
@@ -107,15 +96,7 @@ def _process_documents(source, chunker, embedder, sink, state_manager, config):
     sink.sink(all_chunks)
 
     logger.info("Updating state for processed files...")
-    source_type = config.get("source", {}).get("type")
-    if source_type == "local_files" or source_type == "s3":
-        for doc in documents_to_process:
-            source_identifier = doc.metadata.get("source")
-            if source_identifier:
-                state_manager.update_file_state(source_identifier)
-                logger.debug(f"Updated state for source: {source_identifier}")
-    elif source_type == "postgres":
-        state_manager.update_run_timestamp()
+    source.update_state(processed_docs)
     state_manager.save_state()
 
 
@@ -129,13 +110,15 @@ def run_pipeline(config_path: str):
         state_manager = StateManager()
         config = load_config(config_path)
         if not config:
-            logger.error(
-                "Configuration is empty or could not be loaded. Aborting pipeline."
-            )
+            logger.error("Configuration is empty. Aborting pipeline.")
             return
 
-        source, chunker, embedder, sink = _build_components(config, state_manager)
-        _process_documents(source, chunker, embedder, sink, state_manager, config)
+        source, chunker, embedder, sink = _build_components(
+            config, state_manager
+        )
+        _process_documents(
+            source, chunker, embedder, sink, state_manager, config
+        )
 
         logger.info("YamlPipe pipeline completed successfully.")
 

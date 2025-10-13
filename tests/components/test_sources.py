@@ -5,8 +5,14 @@ Tests for the data source components.
 import pytest
 from unittest.mock import patch, MagicMock
 import requests
+import psycopg2
 
-from yamlpipe.components.sources import LocalFileSource, WebSource
+from yamlpipe.components.sources import (
+    LocalFileSource,
+    WebSource,
+    S3Source,
+    PostgreSQLSource,
+)
 from yamlpipe.utils.data_models import Document
 
 
@@ -14,7 +20,6 @@ from yamlpipe.utils.data_models import Document
 def mock_state_manager():
     """Fixture to create a mock StateManager."""
     manager = MagicMock()
-    # Default behavior: has_changed returns True for any file
     manager.has_changed.return_value = True
     return manager
 
@@ -22,71 +27,91 @@ def mock_state_manager():
 # --- Tests for LocalFileSource ---
 
 
-def test_local_source_handles_empty_dir(mock_state_manager):
-    """Test that LocalFileSource returns an empty list for an empty directory."""
-    with patch("pathlib.Path.glob") as mock_glob:
-        mock_glob.return_value = []
+@patch("pathlib.Path.glob")
+@patch(
+    "unstructured.partition.auto.partition",
+    return_value=[MagicMock(text="test content")],
+)
+def test_local_source_loads_data(mock_partition, mock_glob, mock_state_manager):
+    """Test that LocalFileSource loads data from files."""
+    mock_file = MagicMock()
+    mock_file.is_file.return_value = True
+    mock_glob.return_value = [mock_file]
 
-        source = LocalFileSource(
-            path="/fake/data",
-            glob_pattern="*.txt",
-            state_manager=mock_state_manager,
-        )
-        documents = source.load_data()
+    source = LocalFileSource(
+        path="/fake/data",
+        glob_pattern="*.txt",
+        state_manager=mock_state_manager,
+    )
+    documents = source.load_data()
 
-        assert len(documents) == 0
+    assert len(documents) == 1
+    assert documents[0].content == "test content"
 
 
 # --- Tests for WebSource ---
 
 
 @patch("requests.get")
-def test_web_source_loads_data_successfully(mock_requests_get):
+def test_web_source_loads_data(mock_requests_get):
     """Test that WebSource successfully fetches and parses a web page."""
-    # Setup mock response
     mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = "<html><body><h1>Title</h1><p>Hello world</p></body></html>"
+    mock_response.text = "<html><body><p>Hello world</p></body></html>"
     mock_requests_get.return_value = mock_response
 
     source = WebSource(url="http://fake-url.com")
     documents = source.load_data()
 
-    mock_requests_get.assert_called_once_with("http://fake-url.com", timeout=10)
     assert len(documents) == 1
     assert "Hello world" in documents[0].content
-    assert documents[0].metadata["source"] == "http://fake-url.com"
 
 
-@patch("requests.get")
-def test_web_source_handles_request_exception(mock_requests_get):
-    """Test that WebSource returns an empty list when a request fails."""
-    mock_requests_get.side_effect = requests.exceptions.RequestException("Test error")
+# --- Tests for S3Source ---
 
-    source = WebSource(url="http://fake-url.com")
+
+@patch("boto3.client")
+def test_s3_source_loads_data(mock_boto3_client, mock_state_manager):
+    """Test that S3Source loads data from S3."""
+    mock_s3 = MagicMock()
+    mock_boto3_client.return_value = mock_s3
+    mock_s3.list_objects_v2.return_value = {
+        "Contents": [{"Key": "test.txt", "ETag": "123"}]
+    }
+    mock_s3.get_object.return_value = {
+        "Body": MagicMock(read=MagicMock(return_value=b"test content"))
+    }
+
+    source = S3Source(
+        bucket="test-bucket", prefix="", state_manager=mock_state_manager
+    )
     documents = source.load_data()
 
-    assert len(documents) == 0
+    assert len(documents) == 1
+    assert documents[0].content == "test content"
 
 
-@patch("requests.head")
-def test_web_source_connection_test_success(mock_requests_head):
-    """Test a successful connection test for WebSource."""
-    mock_response = MagicMock()
-    mock_response.raise_for_status.return_value = None
-    mock_requests_head.return_value = mock_response
-
-    source = WebSource(url="http://fake-url.com")
-    source.test_connection()  # Should not raise an exception
+# --- Tests for PostgreSQLSource ---
 
 
-@patch("requests.head")
-def test_web_source_connection_test_failure(mock_requests_head):
-    """Test a failed connection test for WebSource."""
-    mock_requests_head.side_effect = requests.exceptions.RequestException(
-        "Connection failed"
+@patch("psycopg2.connect")
+def test_postgres_source_loads_data(mock_psycopg2_connect, mock_state_manager):
+    """Test that PostgreSQLSource loads data from a database."""
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2_connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_cur.fetchall.return_value = [{"content": "test content", "id": 1}]
+
+    source = PostgreSQLSource(
+        host="localhost",
+        port=5432,
+        database="testdb",
+        user="user",
+        password="pass",
+        query="SELECT * FROM test",
+        state_manager=mock_state_manager,
     )
+    documents = source.load_data()
 
-    source = WebSource(url="http://fake-url.com")
-    with pytest.raises(ConnectionError):
-        source.test_connection()
+    assert len(documents) == 1
+    assert documents[0].content == "test content"

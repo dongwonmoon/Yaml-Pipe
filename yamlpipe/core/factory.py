@@ -8,7 +8,12 @@ pipeline where components can be easily added or replaced via configuration.
 """
 
 import logging
-from ..components.sources import LocalFileSource, WebSource, S3Source, PostgreSQLSource
+from ..components.sources import (
+    LocalFileSource,
+    WebSource,
+    S3Source,
+    PostgreSQLSource,
+)
 from ..components.chunkers import (
     RecursiveCharacterChunker,
     MarkdownChunker,

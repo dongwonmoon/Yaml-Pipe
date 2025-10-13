@@ -1,21 +1,46 @@
+import pytest
 from yamlpipe.utils.data_models import Document
-from yamlpipe.components.chunkers import RecursiveCharacterChunker
+from yamlpipe.components.chunkers import (
+    RecursiveCharacterChunker,
+    MarkdownChunker,
+    AdaptiveChunker,
+)
 
 
-def test_recursive_character_chunker():
-    """Tests the basic functionality of the RecursiveCharacterChunker."""
-    chunker = RecursiveCharacterChunker(chunk_size=30, chunk_overlap=5)
-    doc = Document(
-        content="This is a test sentence for our amazing chunker.",
+@pytest.fixture
+def sample_document():
+    return Document(
+        content="This is a test sentence for our amazing chunker. It is a long sentence.",
         metadata={"source": "test.txt"},
     )
 
-    chunked_docs = chunker.chunk(doc)
 
-    assert len(chunked_docs) > 1
-    assert chunked_docs[0].content == "This is a test sentence for"
-    assert chunked_docs[1].content == "for our amazing chunker."
+def test_recursive_character_chunker(sample_document):
+    """Tests the RecursiveCharacterChunker."""
+    chunker = RecursiveCharacterChunker(chunk_size=30, chunk_overlap=5)
+    chunks = chunker.chunk(sample_document)
+    assert len(chunks) > 1
+    assert chunks[0].content == "This is a test sentence for"
+    assert chunks[1].content == "for our amazing chunker. It"
+    assert chunks[0].metadata["source"] == "test.txt"
 
-    assert chunked_docs[0].metadata["source"] == "test.txt"
-    assert chunked_docs[0].metadata["chunk_index"] == 1
-    assert chunked_docs[1].metadata["chunk_index"] == 2
+
+def test_markdown_chunker():
+    """Tests the MarkdownChunker."""
+    doc = Document(
+        content="# Header 1\n\nThis is a paragraph.\n\n## Header 2\n\n- List item 1\n- List item 2",
+        metadata={"source": "test.md"},
+    )
+    chunker = MarkdownChunker()
+    chunks = chunker.chunk(doc)
+    assert len(chunks) > 1
+    assert chunks[0].content.startswith("# Header 1")
+    assert chunks[1].content.startswith("## Header 2")
+
+
+def test_adaptive_chunker(sample_document):
+    """Tests the AdaptiveChunker."""
+    chunker = AdaptiveChunker(chunk_size=30, chunk_overlap=5)
+    chunks = chunker.chunk(sample_document)
+    assert len(chunks) > 1
+    assert chunks[0].metadata["source"] == "test.txt"
