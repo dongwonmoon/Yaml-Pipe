@@ -16,27 +16,27 @@ logger = logging.getLogger(__name__)
 # --- UI 구성 ---
 
 st.set_page_config(page_title="YamlPipe Dashboard", layout="wide")
-st.title("🚀 YamlPipe: AI 데이터 파이프라인 대시보드")
+st.title("🚀 YamlPipe: AI Data Pipeline Dashboard")
 
 st.markdown(
     """
-이 대시보드를 사용하여 터미널 없이 YamlPipe의 핵심 기능을 실행하고 테스트해볼 수 있습니다. 
-데이터 소스를 선택하고, 파이프라인을 실행한 뒤, 생성된 벡터 DB에 직접 질문해보세요!
+Use this dashboard to run and test the core features of YamlPipe without the terminal. 
+Select a data source, run the pipeline, and then ask questions directly to the generated vector database!
 """
 )
 
-# --- 1. 데이터 소스 선택 섹션 ---
-st.header("1. 데이터 소스 선택")
+# --- 1. Data Source Selection Section ---
+st.header("1. Select Data Source")
 source_type = st.radio(
-    "어떤 종류의 데이터를 처리할까요?",
-    ("로컬 파일 업로드", "웹사이트 URL"),
+    "What kind of data would you like to process?",
+    ("Local File Upload", "Website URL"),
     horizontal=True,
 )
 
 
 # 임시 YAML 파일을 생성하고 관리하기 위한 함수
 def create_temp_pipeline_config(source_config):
-    """임시 파이프라인 설정을 생성하는 함수"""
+    """Function to create a temporary pipeline configuration"""
     # 기본 템플릿
     config_template = {
         "chunker": {
@@ -71,57 +71,57 @@ def create_temp_pipeline_config(source_config):
 
 
 source_config = None
-if source_type == "로컬 파일 업로드":
+if source_type == "Local File Upload":
     uploaded_files = st.file_uploader(
-        "처리할 문서 파일들을 업로드하세요 (.txt, .md, .pdf 등)",
+        "Upload your document files (.txt, .md, .pdf, etc.)",
         accept_multiple_files=True,
     )
     if uploaded_files:
-        # 업로드된 파일을 저장할 임시 폴더 생성
+        # Create a temporary directory to store uploaded files
         upload_dir = Path("temp_ui/uploads")
         upload_dir.mkdir(parents=True, exist_ok=True)
 
-        # 파일 저장
+        # Save files
         for uploaded_file in uploaded_files:
             with open(upload_dir / uploaded_file.name, "wb") as f:
                 f.write(uploaded_file.getbuffer())
 
-        # LocalFileSource를 위한 설정 생성
+        # Create config for LocalFileSource
         source_config = {
             "type": "local_files",
             "config": {"path": str(upload_dir), "glob_pattern": "*.*"},
         }
 
-elif source_type == "웹사이트 URL":
+elif source_type == "Website URL":
     url = st.text_input(
-        "처리할 웹사이트의 URL을 입력하세요", "https://ko.wikipedia.org/wiki/인공지능"
+        "Enter the URL of the website to process", "https://en.wikipedia.org/wiki/Artificial_intelligence"
     )
     if url:
-        # WebSource를 위한 설정 생성
+        # Create config for WebSource
         source_config = {"type": "web", "config": {"url": url}}
 
-# --- 2. 파이프라인 실행 섹션 ---
-st.header("2. 파이프라인 실행")
+# --- 2. Run Pipeline Section ---
+st.header("2. Run Pipeline")
 
 if source_config:
-    if st.button("▶️ 파이프라인 실행하기"):
-        # 1. 임시 설정 파일 생성
+    if st.button("▶️ Run Pipeline"):
+        # 1. Create temporary config file
         temp_config_path = create_temp_pipeline_config(source_config)
-        st.info(f"임시 설정 파일 생성: {temp_config_path}")
+        st.info(f"Temporary config file created: {temp_config_path}")
 
-        # 2. 파이프라인 실행 및 로그 출력
-        with st.spinner("파이프라인이 실행 중입니다... 잠시만 기다려주세요..."):
-            log_container = st.expander("실시간 로그 보기", expanded=True)
+        # 2. Run pipeline and display logs
+        with st.spinner("Pipeline is running... Please wait..."):
+            log_container = st.expander("View Real-time Logs", expanded=True)
             with log_container:
-                # 간단한 로그 캡처를 위해 print 대신 리스트에 저장
+                # Capture logs in a list instead of printing to console
                 logs = []
 
                 def log_message(message):
                     logs.append(message)
-                    st.text(message)  # 실시간으로 로그를 화면에 텍스트로 출력
+                    st.text(message)  # Display logs in real-time as text
 
                 try:
-                    # run_pipeline이 로깅을 사용하므로, Streamlit 핸들러를 추가합니다.
+                    # Since run_pipeline uses logging, add a Streamlit handler
                     class StreamlitLogHandler(logging.Handler):
                         def __init__(self, container):
                             super().__init__()
@@ -130,17 +130,17 @@ if source_config:
                         def emit(self, record):
                             self.container.text(self.format(record))
 
-                    # 기존 로거에 핸들러 추가
+                    # Add handler to the root logger
                     streamlit_handler = StreamlitLogHandler(log_container)
                     logging.getLogger().addHandler(streamlit_handler)
 
                     run_pipeline(config_path=temp_config_path)
-                    st.success("🎉 파이프라인 실행이 성공적으로 완료되었습니다!")
+                    st.success("🎉 Pipeline executed successfully!")
 
-                    # 사용 후 핸들러 제거 (중복 로깅 방지)
+                    # Remove handler after use to prevent duplicate logging
                     logging.getLogger().removeHandler(streamlit_handler)
 
-                    # 검색 기능을 위해 sink 정보를 세션에 저장
+                    # Save sink and embedder info to session for the search feature
                     st.session_state["sink_config"] = load_config(temp_config_path)[
                         "sink"
                     ]
@@ -149,25 +149,25 @@ if source_config:
                     ]
 
                 except Exception as e:
-                    st.error(f"파이프라인 실행 중 에러 발생: {e}")
+                    st.error(f"An error occurred during pipeline execution: {e}")
 
-# --- 3. 검색 테스트 섹션 ---
-st.header("3. 검색 테스트")
+# --- 3. Search Test Section ---
+st.header("3. Search Test")
 
 if "sink_config" in st.session_state:
-    st.info("파이프라인이 성공적으로 실행되어, 아래에서 검색을 테스트해볼 수 있습니다.")
-    query = st.text_input("벡터 데이터베이스에 질문해보세요:")
+    st.info("Pipeline has been executed. You can now test the search below.")
+    query = st.text_input("Ask a question to the vector database:")
 
     if query:
         try:
-            # 평가(Evaluation) 로직 재활용
-            with st.spinner("검색 중..."):
+            # Reuse the evaluation logic for searching
+            with st.spinner("Searching..."):
                 embedder = build_component(
                     st.session_state["embedder_config"], EMBEDDER_REGISTRY
                 )
                 sink_config = st.session_state["sink_config"]
 
-                # DB 클라이언트 생성 (Evaluator 로직 참고)
+                # Create DB client (referencing Evaluator logic)
                 retriever = None
                 if sink_config["type"] == "chromadb":
                     client = chromadb.HttpClient(
@@ -183,7 +183,7 @@ if "sink_config" in st.session_state:
                     db = lancedb.connect(sink_config["config"]["uri"])
                     retriever = db.open_table(sink_config["config"]["table_name"])
 
-                # 검색 수행
+                # Perform search
                 query_vector = embedder.embed([query])[0]
 
                 results = None
@@ -191,24 +191,24 @@ if "sink_config" in st.session_state:
                     results = retriever.query(
                         query_embeddings=[query_vector.tolist()], n_results=3
                     )
-                    st.subheader("🔍 검색 결과 (Top 3)")
+                    st.subheader("🔍 Search Results (Top 3)")
                     for i, (doc, meta) in enumerate(
                         zip(results["documents"][0], results["metadatas"][0])
                     ):
-                        st.markdown(f"**{i+1}. 출처: `{meta.get('source', 'N/A')}`**")
+                        st.markdown(f"**{i+1}. Source: `{meta.get('source', 'N/A')}`**")
                         st.info(doc)
 
                 elif sink_config["type"] == "lancedb":
                     results = retriever.search(query_vector).limit(3).to_df()
-                    st.subheader("🔍 검색 결과 (Top 3)")
+                    st.subheader("🔍 Search Results (Top 3)")
                     for index, row in results.iterrows():
                         st.markdown(
-                            f"**{index+1}. 출처: `{row.get('source', 'N/A')}`**"
+                            f"**{index+1}. Source: `{row.get('source', 'N/A')}`**"
                         )
                         st.info(row["text"])
 
         except Exception as e:
-            st.error(f"검색 중 에러 발생: {e}")
+            st.error(f"An error occurred during search: {e}")
 
 else:
-    st.warning("먼저 파이프라인을 실행하여 데이터베이스를 생성해주세요.")
+    st.warning("Please run a pipeline first to create the database.")
