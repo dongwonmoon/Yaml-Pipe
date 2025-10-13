@@ -10,7 +10,7 @@ from yamlpipe.components.sources import LocalFileSource
 from yamlpipe.components.chunkers import RecursiveCharacterChunker
 from yamlpipe.components.embedders import SentenceTransformerEmbedder
 from yamlpipe.components.sinks import LanceDBSink
-from yamlpipe.utils.state_manager import StateManager
+from yamlpipe.utils.state_manager import StateManager, JSONStateManager
 
 
 def test_build_source_component():
@@ -20,7 +20,7 @@ def test_build_source_component():
         "config": {
             "path": "./data",
             "glob_pattern": "*.txt",
-            "state_manager": StateManager(),
+            "state_manager": StateManager(backend=JSONStateManager()),
         },
     }
     component = build_component(config, SOURCE_REGISTRY)

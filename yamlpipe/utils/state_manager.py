@@ -47,17 +47,17 @@ class JSONStateManager(BaseStateManager):
         """
         If the JSON file exists, it is read, otherwise a new state is created.
         """
-        if self.state_file_path.exists():
-            logger.debug(f"Loading state from '{self.state_file_path}'")
-            try:
-                with open(self.state_file_path, "r") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                logger.error("Error loading state file. Starting fresh.", exc_info=True)
-                return {"processed_files": {}, "last_run_timestamp": None}
+        if not self.state_file_path.exists():
+            logger.debug("Creating new state as state file does not exist.")
+            return {"processed_items": {}, "last_run_timestamp": None}
 
-            logger.debug("Creating new state.")
-            return {"processed_files": {}, "last_run_timestamp": None}
+        logger.debug(f"Loading state from '{self.state_file_path}'")
+        try:
+            with open(self.state_file_path, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            logger.error("Error loading state file. Starting fresh.", exc_info=True)
+            return {"processed_items": {}, "last_run_timestamp": None}
 
     def save_state(self, state: Dict):
         """Save the given state to the JSON file."""

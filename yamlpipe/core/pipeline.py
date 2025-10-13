@@ -18,7 +18,7 @@ from .factory import (
     SINK_REGISTRY,
     STATE_MANAGER_REGISTRY,
 )
-from ..utils.state_manager import StateManager, BaseStateManager
+from ..utils.state_manager import StateManager, BaseStateManager, JSONStateManager
 
 logger = logging.getLogger(__name__)
 

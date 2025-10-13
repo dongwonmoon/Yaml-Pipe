@@ -9,7 +9,7 @@ import json
 from typing_extensions import Annotated
 import shutil
 
-from .utils.state_manager import StateManager
+from .utils.state_manager import StateManager, JSONStateManager
 from .core.pipeline import run_pipeline
 from .core.factory import (
     SOURCE_REGISTRY,
@@ -150,7 +150,7 @@ def test_connection(
     try:
         config = load_config(config_path)
         if component == "source":
-            state_manager = StateManager()
+            state_manager = StateManager(backend=JSONStateManager())
             config["source"]["config"]["state_manager"] = state_manager
             comp_obj = build_component(config["source"], SOURCE_REGISTRY)
         elif component == "sink":
