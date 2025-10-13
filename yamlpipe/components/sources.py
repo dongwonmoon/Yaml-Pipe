@@ -161,6 +161,9 @@ class WebSource(BaseSource):
             url (str): The URL of the web page to load.
         """
         self.url = url
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+        }
         logger.debug(f"Initialized WebSource with URL: {self.url}")
 
     def load_data(self) -> List[Document]:
@@ -169,7 +172,7 @@ class WebSource(BaseSource):
         """
         logger.info(f"Fetching content from URL: {self.url}")
         try:
-            response = requests.get(self.url, timeout=10)
+            response = requests.get(self.url, timeout=10, headers=self.headers)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "html.parser")

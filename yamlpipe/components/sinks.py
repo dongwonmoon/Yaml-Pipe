@@ -16,6 +16,8 @@ from collections import defaultdict
 import lancedb
 from lancedb.pydantic import pydantic_to_schema
 import chromadb
+from chromadb.config import Settings
+
 
 from ..utils.data_models import Document
 from ..utils.dynamic_schemas import create_dynamic_pydantic_model
@@ -188,18 +190,21 @@ class LanceDBSink(BaseSink):
 class ChromaDBSink(BaseSink):
     """A sink that writes data to a ChromaDB collection."""
 
-    def __init__(self, path: str, collection_name: str):
+    def __init__(self, host: str, port: int, collection_name: str):
         """
-        Initializes the ChromaDBSink.
+        Initializes the ChromaDBSink with server connection details.
 
         Args:
-            path (str): The path to the directory where ChromaDB should store its data.
+            host (str): The hostname of the ChromaDB server.
+            port (int): The port of the ChromaDB server.
             collection_name (str): The name of the collection to sink data into.
         """
-        self.path = path
+        self.host = host
+        self.port = port
         self.collection_name = collection_name
+        self.client = chromadb.HttpClient(host=self.host, port=self.port)
         logger.debug(
-            f"Initialized ChromaDBSink with path='{path}', collection='{self.collection_name}'"
+            f"Initialized ChromaDBSink with host='{host}', port='{port}', collection='{self.collection_name}'"
         )
 
     def sink(self, documents: List[Document]):
@@ -209,14 +214,13 @@ class ChromaDBSink(BaseSink):
             return
 
         logger.info(
-            f"Sinking {len(documents)} documents to ChromaDB collection '{self.collection_name}' at '{self.path}'"
+            f"Sinking {len(documents)} documents to ChromaDB collection '{self.collection_name}' at {self.host}:{self.port}"
         )
         try:
-            client = chromadb.PersistentClient(path=self.path)
-            collection = client.get_or_create_collection(name=self.collection_name)
+            collection = self.client.get_or_create_collection(name=self.collection_name)
         except Exception as e:
             logger.error(
-                f"Failed to connect to ChromaDB at path: '{self.path}'",
+                f"Failed to connect to ChromaDB server at {self.host}:{self.port}",
                 exc_info=True,
             )
             raise ConnectionError(f"Could not connect to ChromaDB: {e}")
@@ -239,7 +243,11 @@ class ChromaDBSink(BaseSink):
         ids = [str(uuid.uuid4()) for _ in documents]
         contents = [doc.content for doc in documents]
         embeddings = [doc.metadata.get("embedding").tolist() for doc in documents]
-        metadatas = [doc.metadata for doc in documents]
+        metadatas = []
+        for doc in documents:
+            clean_meta = doc.metadata.copy()
+            clean_meta.pop("embedding")
+            metadatas.append(clean_meta)
 
         logger.info(
             f"Adding {len(documents)} new records to collection '{self.collection_name}'."
@@ -257,10 +265,9 @@ class ChromaDBSink(BaseSink):
 
     def test_connection(self):
         """Tests the connection to ChromaDB by connecting and counting collections."""
-        logger.info(f"Testing connection for ChromaDBSink at path: {self.path}")
+        logger.info(f"Testing connection for ChromaDBSink at {self.host}:{self.port}")
         try:
-            client = chromadb.PersistentClient(path=self.path)
-            client.count_collections()
+            self.client.heartbeat()
             logger.info("Connection to ChromaDB successful.")
         except Exception as e:
             logger.error(f"Failed to connect to ChromaDB: {e}", exc_info=True)
