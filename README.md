@@ -18,7 +18,7 @@ YamlPipe is a flexible ETL pipeline designed to streamline the process of conver
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/your-username/vector-flow.git
+    git clone https://github.com/dongwonmoon/vector-flow.git
     cd vector-flow
     ```
 
