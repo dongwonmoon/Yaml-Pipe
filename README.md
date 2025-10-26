@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/dongwonmoon/Yaml-Pipe/assets/banner.png" width="480" alt="YamlPipe Logo">
+  <img src="https://raw.githubusercontent.com/dongwonmoon/Yaml-Pipe/main/assets/banner.png" width="480" alt="YamlPipe Logo">
 </p>
 
 <h1 align="center">🧩 YamlPipe</h1>
