@@ -53,11 +53,6 @@ cd Yaml-Pipe
 pip install -r requirements.txt
 ```
 
-For Web UI:
-```bash
-pip install -r requirements-ui.txt
-```
-
 ---
 
 ## 🧩 Quick Start
