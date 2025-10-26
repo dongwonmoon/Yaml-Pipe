@@ -1,90 +1,73 @@
-# YamlPipe
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dongwonmoon/Yaml-Pipe/assets/banner.png" width="480" alt="YamlPipe Logo">
+</p>
 
-YamlPipe is a flexible ETL pipeline designed to streamline the process of converting text data into vector embeddings and loading them into a vector database. It allows you to define and run a multi-step pipeline using a simple YAML configuration file.
+<h1 align="center">🧩 YamlPipe</h1>
 
-## Features
+<p align="center">
+  A lightweight, YAML-driven <b>ETL pipeline</b> that transforms text data into vector embeddings — <br>
+  with zero boilerplate, full flexibility, and seamless database integration.
+</p>
 
-- **YAML-based Configuration**: Easily define your pipeline's components and their parameters in a `pipeline.yaml` file.
-- **Pluggable Components**: Swap out components for different data sources, chunking strategies, embedding models, and data sinks.
-- **Extensible**: Designed to be easily extended with new components.
-- **Multiple Data Sources**: Load data from local files (`local_files`), web pages (`web`), S3 buckets (`s3`), and PostgreSQL databases (`postgres`).
-- **Advanced Chunking**: Choose from `recursive_character`, `markdown`, or `adaptive` chunking strategies.
-- **Multiple Embedding Models**: Use `sentence_transformer` or `openai` models.
-- **Multiple Vector Databases**: Sink data into `lancedb` or `chromadb`.
-- **CLI**: A powerful CLI to run pipelines, manage projects, and test components.
-- **Web UI**: A Streamlit-based dashboard to run pipelines and test search.
+<p align="center">
+  <a href="https://github.com/dongwonmoon/Yaml-Pipe/stargazers"><img src="https://img.shields.io/github/stars/dongwonmoon/Yaml-Pipe?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/dongwonmoon/Yaml-Pipe/blob/main/LICENSE"><img src="https://img.shields.io/github/license/dongwonmoon/Yaml-Pipe" alt="License"></a>
+  <img src="https://img.shields.io/badge/Python-3.11+-blue" alt="Python Version">
+  <img src="https://img.shields.io/badge/YAML-Pipeline-orange" alt="YAML Based">
+</p>
 
-## Installation
+---
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/dongwonmoon/vector-flow.git
-    cd vector-flow
-    ```
+## 🚀 Overview
 
-2.  Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+**YamlPipe** lets you build end-to-end ETL pipelines for vector embedding workflows — all defined in a single YAML file.
 
-3.  To use the Web UI, install the UI-specific dependencies:
-    ```bash
-    pip install -r requirements-ui.txt
-    ```
+It’s designed for **AI developers**, **data engineers**, and **RAG (Retrieval-Augmented Generation)** builders who want simplicity without losing flexibility.
 
-## Usage
+With YamlPipe, you can:
 
-### Command-Line Interface
+- ✅ Load data from files, web, S3, or Postgres  
+- 🧠 Chunk text dynamically using multiple strategies  
+- ⚙️ Generate embeddings with OpenAI or Sentence Transformers  
+- 🧩 Store vectors in LanceDB or ChromaDB  
+- 💻 Run everything via CLI or Web UI (Streamlit)
 
-YamlPipe provides a powerful CLI for managing your projects.
+---
 
-- **Initialize a new project:**
-  ```bash
-  python main.py init
-  ```
+## 🧠 Features
 
-- **Run a pipeline:**
-  ```bash
-  python main.py run -c pipelines/pipeline.yaml
-  ```
+- **YAML-based Configuration** – define your pipeline once, run it anywhere  
+- **Pluggable Components** – modular architecture for each stage  
+- **Advanced Chunking** – `recursive_character`, `markdown`, or `adaptive`  
+- **Multiple Embedding Models** – `sentence_transformer` and `openai`  
+- **Vector Database Integration** – `lancedb` or `chromadb`  
+- **CLI & Streamlit UI** – full control, both terminal and browser  
 
-- **List available components:**
-  ```bash
-  python main.py list-components
-  ```
+---
 
-- **Check the status of processed files:**
-  ```bash
-  python main.py status
-  ```
-
-- **Test the connection to a source or sink:**
-  ```bash
-  python main.py test-connection source -c pipelines/pipeline.yaml
-  ```
-
-- **Clean up generated files:**
-  ```bash
-  python main.py clean -c pipelines/pipeline.yaml --yes
-  ```
-
-- **Evaluate the pipeline:**
-  ```bash
-  python main.py eval eval_dataset.jsonl -c pipelines/pipeline.yaml
-  ```
-
-### Web Interface
-
-Run the Streamlit web interface for a more interactive experience.
+## ⚡ Installation
 
 ```bash
-streamlit run app.py
+git clone https://github.com/dongwonmoon/Yaml-Pipe.git
+cd Yaml-Pipe
+pip install -r requirements.txt
 ```
 
-## Configuration
+For Web UI:
+```bash
+pip install -r requirements-ui.txt
+```
 
-The pipeline is controlled by a YAML file. Here's an example with all available components:
+---
 
+## 🧩 Quick Start
+
+```bash
+python main.py init
+python main.py run -c pipelines/pipeline.yaml
+```
+
+### Example Pipeline
 ```yaml
 source:
   type: local_files
@@ -110,7 +93,55 @@ sink:
     collection_name: "my_documents"
 ```
 
-- **`source`**: `local_files`, `web`, `s3`, `postgres`
-- **`chunker`**: `recursive_character`, `markdown`, `adaptive`
-- **`embedder`**: `sentence_transformer`, `openai`
-- **`sink`**: `lancedb`, `chromadb`
+---
+
+## 🌐 Web Interface
+
+```bash
+streamlit run app.py
+```
+
+Use the dashboard to visualize your pipelines, test search results, and monitor ingestion progress.
+
+---
+
+## 💡 Why YamlPipe?
+
+- No more boilerplate ETL code — define everything in YAML  
+- Designed for RAG, embedding pipelines, and AI data workflows  
+- Fully open-source and easily extendable  
+
+---
+
+## 🧭 Roadmap
+
+- [ ] Add Milvus / Pinecone sinks  
+- [ ] Support LangChain / LlamaIndex integrations  
+- [ ] Add benchmarking and pipeline visualization  
+
+---
+
+## 🤝 Contributing
+
+Contributions are always welcome!  
+Fork the repo, create a feature branch, and submit a PR.  
+New ideas, documentation improvements, and bug reports are all appreciated.
+
+---
+
+## ⭐ Support
+
+If YamlPipe helps you, please consider giving it a **star** 🌟  
+Every star motivates continued development and new features!
+
+<p align="center">
+  <a href="https://github.com/dongwonmoon/Yaml-Pipe/stargazers">
+    <img src="https://img.shields.io/github/stars/dongwonmoon/Yaml-Pipe?style=social" alt="Star YamlPipe">
+  </a>
+</p>
+
+---
+
+## 🪪 License
+
+MIT © [dongwonmoon](https://github.com/dongwonmoon)
